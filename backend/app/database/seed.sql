@@ -162,3 +162,4 @@ VALUES
 	'Returned with worn power cable; logged for replacement.',
 	'Returned'
 );
+('Meeting Rooms');

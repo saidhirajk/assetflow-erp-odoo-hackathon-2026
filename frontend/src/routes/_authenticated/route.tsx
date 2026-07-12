@@ -2,11 +2,14 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
-import { getAuthUser } from "@/lib/backend/app-backend";
+import { getAuthSession, getAuthUser } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    const session = await getAuthSession();
+    if (!session) throw redirect({ to: "/auth" });
+
     const user = await getAuthUser();
     if (!user) throw redirect({ to: "/auth" });
     return { user };

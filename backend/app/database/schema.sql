@@ -6,8 +6,11 @@
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS departments CASCADE;
 DROP TABLE IF EXISTS asset_categories CASCADE;
+<<<<<<< HEAD
 DROP TABLE IF EXISTS allocations CASCADE;
 DROP TABLE IF EXISTS assets CASCADE;
+=======
+>>>>>>> origin/main
 
 ------------------------------------------------------------
 -- DEPARTMENTS
@@ -219,3 +222,4 @@ ALTER TABLE allocations
 ADD CONSTRAINT fk_allocation_department
 FOREIGN KEY(allocated_to_department_id)
 REFERENCES departments(department_id);
+);
