@@ -6,11 +6,14 @@
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS departments CASCADE;
 DROP TABLE IF EXISTS asset_categories CASCADE;
-<<<<<<< HEAD
 DROP TABLE IF EXISTS allocations CASCADE;
 DROP TABLE IF EXISTS assets CASCADE;
-=======
->>>>>>> origin/main
+DROP TABLE IF EXISTS audit_items CASCADE;
+DROP TABLE IF EXISTS audit_auditors CASCADE;
+DROP TABLE IF EXISTS audit_cycles CASCADE;
+DROP TABLE IF EXISTS maintenance_requests CASCADE;
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS transfers CASCADE;
 
 ------------------------------------------------------------
 -- DEPARTMENTS
@@ -222,4 +225,238 @@ ALTER TABLE allocations
 ADD CONSTRAINT fk_allocation_department
 FOREIGN KEY(allocated_to_department_id)
 REFERENCES departments(department_id);
+
+------------------------------------------------------------
+-- TRANSFERS
+------------------------------------------------------------
+
+CREATE TABLE transfers (
+
+    transfer_id SERIAL PRIMARY KEY,
+
+    asset_id INTEGER NOT NULL,
+
+    from_user_id INTEGER NOT NULL,
+
+    to_user_id INTEGER NOT NULL,
+
+    requested_by INTEGER NOT NULL,
+
+    status VARCHAR(20)
+        DEFAULT 'Requested'
+        CHECK (status IN ('Requested','Approved','Rejected','Completed')),
+
+    approved_by INTEGER,
+
+    requested_at TIMESTAMP NOT NULL,
+
+    resolved_at TIMESTAMP
+
 );
+
+ALTER TABLE transfers
+ADD CONSTRAINT fk_transfer_asset
+FOREIGN KEY(asset_id)
+REFERENCES assets(asset_id);
+
+ALTER TABLE transfers
+ADD CONSTRAINT fk_transfer_from_user
+FOREIGN KEY(from_user_id)
+REFERENCES users(user_id);
+
+ALTER TABLE transfers
+ADD CONSTRAINT fk_transfer_to_user
+FOREIGN KEY(to_user_id)
+REFERENCES users(user_id);
+
+ALTER TABLE transfers
+ADD CONSTRAINT fk_transfer_requested_by
+FOREIGN KEY(requested_by)
+REFERENCES users(user_id);
+
+ALTER TABLE transfers
+ADD CONSTRAINT fk_transfer_approved_by
+FOREIGN KEY(approved_by)
+REFERENCES users(user_id);
+
+------------------------------------------------------------
+-- BOOKINGS
+------------------------------------------------------------
+
+CREATE TABLE bookings (
+
+    booking_id SERIAL PRIMARY KEY,
+
+    asset_id INTEGER NOT NULL,
+
+    booked_by_user_id INTEGER NOT NULL,
+
+    start_time TIMESTAMP NOT NULL,
+
+    end_time TIMESTAMP NOT NULL,
+
+    status VARCHAR(20)
+        DEFAULT 'Upcoming'
+        CHECK (status IN ('Upcoming','Ongoing','Completed','Cancelled')),
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+);
+
+ALTER TABLE bookings
+ADD CONSTRAINT fk_booking_asset
+FOREIGN KEY(asset_id)
+REFERENCES assets(asset_id);
+
+ALTER TABLE bookings
+ADD CONSTRAINT fk_booking_user
+FOREIGN KEY(booked_by_user_id)
+REFERENCES users(user_id);
+
+------------------------------------------------------------
+-- MAINTENANCE REQUESTS
+------------------------------------------------------------
+
+CREATE TABLE maintenance_requests (
+
+    request_id SERIAL PRIMARY KEY,
+
+    asset_id INTEGER NOT NULL,
+
+    raised_by_user_id INTEGER NOT NULL,
+
+    issue_description TEXT NOT NULL,
+
+    priority VARCHAR(20)
+        NOT NULL
+        CHECK (priority IN ('Low','Medium','High','Critical')),
+
+    photo_url TEXT,
+
+    status VARCHAR(30)
+        DEFAULT 'Pending'
+        CHECK (
+            status IN (
+                'Pending',
+                'Approved',
+                'Rejected',
+                'Technician Assigned',
+                'In Progress',
+                'Resolved'
+            )
+        ),
+
+    approved_by INTEGER,
+
+    technician_name VARCHAR(150),
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    resolved_at TIMESTAMP
+
+);
+
+ALTER TABLE maintenance_requests
+ADD CONSTRAINT fk_maintenance_asset
+FOREIGN KEY(asset_id)
+REFERENCES assets(asset_id);
+
+ALTER TABLE maintenance_requests
+ADD CONSTRAINT fk_maintenance_raised_by
+FOREIGN KEY(raised_by_user_id)
+REFERENCES users(user_id);
+
+ALTER TABLE maintenance_requests
+ADD CONSTRAINT fk_maintenance_approved_by
+FOREIGN KEY(approved_by)
+REFERENCES users(user_id);
+
+------------------------------------------------------------
+-- AUDIT CYCLES
+------------------------------------------------------------
+
+CREATE TABLE audit_cycles (
+
+    audit_id SERIAL PRIMARY KEY,
+
+    scope_department_id INTEGER,
+
+    scope_location VARCHAR(255),
+
+    start_date DATE NOT NULL,
+
+    end_date DATE,
+
+    status VARCHAR(20)
+        DEFAULT 'Draft'
+        CHECK (status IN ('Draft','In Progress','Closed'))
+
+);
+
+ALTER TABLE audit_cycles
+ADD CONSTRAINT fk_audit_scope_department
+FOREIGN KEY(scope_department_id)
+REFERENCES departments(department_id);
+
+------------------------------------------------------------
+-- AUDIT AUDITORS
+------------------------------------------------------------
+
+CREATE TABLE audit_auditors (
+
+    audit_id INTEGER NOT NULL,
+
+    user_id INTEGER NOT NULL,
+
+    PRIMARY KEY (audit_id, user_id)
+
+);
+
+ALTER TABLE audit_auditors
+ADD CONSTRAINT fk_audit_auditors_audit
+FOREIGN KEY(audit_id)
+REFERENCES audit_cycles(audit_id)
+ON DELETE CASCADE;
+
+ALTER TABLE audit_auditors
+ADD CONSTRAINT fk_audit_auditors_user
+FOREIGN KEY(user_id)
+REFERENCES users(user_id);
+
+------------------------------------------------------------
+-- AUDIT ITEMS
+------------------------------------------------------------
+
+CREATE TABLE audit_items (
+
+    audit_item_id SERIAL PRIMARY KEY,
+
+    audit_id INTEGER NOT NULL,
+
+    asset_id INTEGER NOT NULL,
+
+    marked_by_user_id INTEGER NOT NULL,
+
+    result VARCHAR(20)
+        DEFAULT 'Pending'
+        CHECK (result IN ('Pending','Verified','Missing','Damaged')),
+
+    notes TEXT
+
+);
+
+ALTER TABLE audit_items
+ADD CONSTRAINT fk_audit_item_audit
+FOREIGN KEY(audit_id)
+REFERENCES audit_cycles(audit_id)
+ON DELETE CASCADE;
+
+ALTER TABLE audit_items
+ADD CONSTRAINT fk_audit_item_asset
+FOREIGN KEY(asset_id)
+REFERENCES assets(asset_id);
+
+ALTER TABLE audit_items
+ADD CONSTRAINT fk_audit_item_marked_by
+FOREIGN KEY(marked_by_user_id)
+REFERENCES users(user_id);
