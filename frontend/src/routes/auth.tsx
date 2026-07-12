@@ -51,15 +51,19 @@ function AuthPage() {
     if (password.length < 8) return toast.error("Password must be at least 8 characters");
     setLoading(true);
     try {
-      await signUpWithPassword({
+      const session = await signUpWithPassword({
         email: String(f.get("email")),
         password,
         name: String(f.get("name")),
         department_id: String(f.get("department_id") ?? ""),
         emailRedirectTo: `${window.location.origin}/dashboard`,
       });
-      toast.success("Account created — you're signed in");
-      navigate({ to: "/dashboard", replace: true });
+      if (session) {
+        toast.success("Account created — you're signed in");
+        navigate({ to: "/dashboard", replace: true });
+      } else {
+        toast.success("Account created. Check your email to confirm sign in if required.");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Sign up failed");
     } finally {

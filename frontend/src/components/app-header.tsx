@@ -23,7 +23,7 @@ export function AppHeader() {
 
   const { data: unread = 0 } = useQuery({
     queryKey: ["notifications-unread"],
-    queryFn: async () => (await countUnreadNotifications()).count ?? 0,
+    queryFn: countUnreadNotifications,
     enabled: !!user,
     refetchInterval: 30_000,
   });

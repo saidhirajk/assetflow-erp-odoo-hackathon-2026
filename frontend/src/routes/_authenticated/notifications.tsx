@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,31 @@ function NotificationsPage() {
   const qc = useQueryClient();
   const { data: items = [] } = useQuery({
     queryKey: ["notifications"],
-    queryFn: async () => {
-      const { data, error } = await listNotifications();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: listNotifications,
   });
+
+  const resolveHref = (notification: { type?: string; reference_type?: string | null }) => {
+    switch (notification.reference_type ?? notification.type) {
+      case "asset_assigned":
+      case "maintenance_approved":
+      case "maintenance_rejected":
+        return "/assets";
+      case "booking_confirmed":
+      case "booking_cancelled":
+      case "booking_reminder":
+        return "/bookings";
+      case "transfer_requested":
+      case "transfer_approved":
+      case "transfer_rejected":
+        return "/transfers";
+      case "overdue_return":
+        return "/allocations";
+      case "audit_discrepancy":
+        return "/audits";
+      default:
+        return "/notifications";
+    }
+  };
 
   const markAll = useMutation({
     mutationFn: async () => {
@@ -61,11 +81,20 @@ function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {items.map((n) => (
-            <Card key={n.id} className={`p-4 ${n.is_read ? "opacity-70" : "border-primary/30"}`} onClick={() => !n.is_read && markOne(n.id)}>
+            <Card
+              key={n.id}
+              className={`p-4 ${n.is_read ? "opacity-70" : "border-primary/30"}`}
+            >
               <div className="flex items-start gap-3">
                 <div className={`h-2 w-2 rounded-full mt-2 ${n.is_read ? "bg-muted-foreground" : "bg-primary"}`} />
                 <div className="flex-1">
-                  <div className="text-sm">{n.message}</div>
+                  <Link
+                    to={resolveHref(n)}
+                    className="text-sm font-medium hover:underline"
+                    onClick={() => !n.is_read && markOne(n.id)}
+                  >
+                    {n.message}
+                  </Link>
                   <div className="text-xs text-muted-foreground mt-1">
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                   </div>
