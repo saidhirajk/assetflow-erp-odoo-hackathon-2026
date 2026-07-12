@@ -43,7 +43,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-3 py-4">
         <Link to="/dashboard" className="flex items-center gap-2 text-primary">
           <Boxes className="h-5 w-5 shrink-0" />
-          {!collapsed && <span className="font-semibold tracking-tight">AssetFlow</span>}
+          {!collapsed && <span className="font-semibold tracking-tight">Sampada</span>}
         </Link>
       </SidebarHeader>
 

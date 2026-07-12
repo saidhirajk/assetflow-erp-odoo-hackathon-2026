@@ -16,7 +16,7 @@ import { cancelBooking, createBooking, listBookableAssets, listBookings } from "
 import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
-  head: () => ({ meta: [{ title: "Bookings - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Bookings - Sampada" }] }),
   component: BookingsPage,
 });
 

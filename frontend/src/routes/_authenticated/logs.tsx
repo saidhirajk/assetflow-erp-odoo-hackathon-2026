@@ -14,7 +14,7 @@ import { listActivityLogs } from "@/lib/backend/app-backend";
 import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/logs")({
-  head: () => ({ meta: [{ title: "Activity Logs - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Activity Logs - Sampada" }] }),
   component: LogsPage,
 });
 

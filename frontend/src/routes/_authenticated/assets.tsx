@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/assets")({
-  head: () => ({ meta: [{ title: "Assets — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Assets — Sampada" }] }),
   component: AssetsPage,
 });
 

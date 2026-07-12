@@ -11,7 +11,7 @@ import { Boxes } from "lucide-react";
 import { getAuthSession, listActiveDepartments, signInWithPassword, signUpWithPassword } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Sign in — Sampada" }] }),
   component: AuthPage,
 });
 
@@ -73,73 +73,124 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <div className="hidden lg:flex flex-col justify-between p-12 bg-sidebar border-r border-sidebar-border">
-        <div className="flex items-center gap-2 text-primary">
+      {/* Left Pane: Premium Dark Mode with Glows and Glassmorphism */}
+      <div className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden bg-zinc-950 text-white">
+        {/* Animated glowing ambient background */}
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] mix-blend-screen opacity-50 animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-indigo-500/20 rounded-full blur-[100px] mix-blend-screen opacity-50 animate-pulse" style={{ animationDuration: '6s' }} />
+
+        {/* Decorative Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+
+        <div className="flex items-center gap-2 relative z-10 text-primary">
           <Boxes className="h-6 w-6" />
-          <span className="text-lg font-semibold tracking-tight">AssetFlow</span>
+          <span className="text-xl font-bold tracking-tight text-white">Sampada</span>
         </div>
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Every asset, allocation, and audit — in one place.
+
+        <div className="relative z-10 space-y-6 max-w-lg mt-auto mb-20">
+          <h1 className="text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/50 leading-tight">
+            Manage your workspace effortlessly.
           </h1>
-          <p className="mt-4 text-muted-foreground max-w-md">
-            Register assets, allocate them to teams, book shared resources, and run
-            organization-wide audits with full activity trails.
+          <p className="text-white/60 text-lg leading-relaxed">
+            Streamline your assets, track resources, and keep everything organized in one incredibly secure platform.
           </p>
+
+          {/* Subtle Glassmorphic Stats Row */}
+          <div className="flex gap-4 pt-4">
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
+              <div className="text-3xl font-bold text-white mb-1">99.9%</div>
+              <div className="text-sm text-white/50">Uptime SLA</div>
+            </div>
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-md">
+              <div className="text-3xl font-bold text-white mb-1">24/7</div>
+              <div className="text-sm text-white/50">Audit Trails</div>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">© AssetFlow ERP</p>
+
+        <p className="text-sm font-medium text-white/40 relative z-10">© 2026 Sampada ERP</p>
       </div>
 
-      <div className="flex items-center justify-center p-6">
-        <Card className="w-full max-w-md p-6">
-          <div className="lg:hidden flex items-center gap-2 text-primary mb-4">
-            <Boxes className="h-5 w-5" /><span className="font-semibold">AssetFlow</span>
+      {/* Right Pane: Clean, Elevated Form Area */}
+      <div className="flex items-center justify-center p-6 bg-zinc-50 dark:bg-zinc-950">
+        <div className="w-full max-w-md">
+          {/* Mobile Header */}
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+            <div className="p-2.5 bg-primary/10 rounded-2xl text-primary ring-1 ring-primary/20">
+              <Boxes className="h-6 w-6" />
+            </div>
+            <span className="text-2xl font-bold tracking-tight">Sampada</span>
           </div>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="login">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                <div><Label htmlFor="li-email">Email</Label>
-                  <Input id="li-email" name="email" type="email" required autoComplete="email" /></div>
-                <div><Label htmlFor="li-password">Password</Label>
-                  <Input id="li-password" name="password" type="password" required autoComplete="current-password" /></div>
-                <Button className="w-full" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</Button>
-              </form>
-            </TabsContent>
+          <Card className="w-full border-0 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] dark:shadow-none dark:border dark:border-zinc-800 rounded-[2rem] overflow-hidden bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl">
+            <div className="p-8">
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid grid-cols-2 w-full mb-8 p-1.5 bg-zinc-100/80 dark:bg-zinc-800/80 rounded-2xl">
+                  <TabsTrigger value="login" className="rounded-xl font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-700 data-[state=active]:shadow-sm transition-all duration-300">Sign in</TabsTrigger>
+                  <TabsTrigger value="signup" className="rounded-xl font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-700 data-[state=active]:shadow-sm transition-all duration-300">Create account</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                <div><Label htmlFor="su-name">Full name</Label>
-                  <Input id="su-name" name="name" required /></div>
-                <div><Label htmlFor="su-email">Email</Label>
-                  <Input id="su-email" name="email" type="email" required /></div>
-                <div><Label htmlFor="su-dept">Department</Label>
-                  <Select name="department_id">
-                    <SelectTrigger id="su-dept"><SelectValue placeholder={departments.length ? "Select department" : "No departments yet — ask admin"} /></SelectTrigger>
-                    <SelectContent>
-                      {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div><Label htmlFor="su-password">Password</Label>
-                  <Input id="su-password" name="password" type="password" required minLength={8} /></div>
-                <div><Label htmlFor="su-confirm">Confirm password</Label>
-                  <Input id="su-confirm" name="confirm" type="password" required minLength={8} /></div>
-                <p className="text-xs text-muted-foreground">
-                  New accounts are created as <strong>Employees</strong>. Roles are elevated by an Admin.
-                </p>
-                <Button className="w-full" disabled={loading}>{loading ? "Creating…" : "Create account"}</Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-          <div className="mt-6 text-center text-xs text-muted-foreground">
-            <Link to="/dashboard" className="hover:text-foreground">Back to app</Link>
-          </div>
-        </Card>
+                <TabsContent value="login" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="li-email" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Email</Label>
+                      <Input id="li-email" name="email" type="email" required autoComplete="email" placeholder="Enter your email" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm placeholder:text-primary/70 placeholder:font-semibold focus:placeholder-transparent" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="li-password" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Password</Label>
+                      <Input id="li-password" name="password" type="password" required autoComplete="current-password" placeholder="Enter your password" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm placeholder:text-primary/70 placeholder:font-semibold focus:placeholder-transparent" />
+                    </div>
+                    <Button className="w-full h-12 rounded-xl mt-4 font-semibold text-base bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-[0.98] transition-all duration-300" disabled={loading}>
+                      {loading ? "Signing in…" : "Sign in"}
+                    </Button>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="signup" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <form onSubmit={handleSignup} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="su-name" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Full name</Label>
+                      <Input id="su-name" name="name" required placeholder="John Doe" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm placeholder:text-primary/70 placeholder:font-semibold focus:placeholder-transparent" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="su-email" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Email</Label>
+                      <Input id="su-email" name="email" type="email" required placeholder="john@example.com" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm placeholder:text-primary/70 placeholder:font-semibold focus:placeholder-transparent" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="su-dept" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Department</Label>
+                      <Select name="department_id">
+                        <SelectTrigger id="su-dept" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm">
+                          <SelectValue placeholder={departments.length ? "Select department" : "No departments yet — ask admin"} />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-zinc-200 shadow-xl">
+                          {departments.map(d => <SelectItem key={d.id} value={d.id} className="rounded-lg">{d.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="su-password" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Password</Label>
+                        <Input id="su-password" name="password" type="password" required minLength={8} placeholder="Create a password" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm placeholder:text-primary/70 placeholder:font-semibold focus:placeholder-transparent" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="su-confirm" className="text-zinc-600 dark:text-zinc-400 font-medium ml-1">Confirm</Label>
+                        <Input id="su-confirm" name="confirm" type="password" required minLength={8} placeholder="Confirm password" className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-300 shadow-sm placeholder:text-primary/70 placeholder:font-semibold focus:placeholder-transparent" />
+                      </div>
+                    </div>
+                    <div className="p-3.5 bg-primary/5 border border-primary/10 rounded-xl mt-2">
+                      <p className="text-xs text-primary/80 font-medium leading-relaxed">
+                        New accounts are created as <strong>Employees</strong>. Roles are elevated by an Admin.
+                      </p>
+                    </div>
+                    <Button className="w-full h-12 rounded-xl mt-4 font-semibold text-base bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-[0.98] transition-all duration-300" disabled={loading}>
+                      {loading ? "Creating account…" : "Create account"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

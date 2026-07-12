@@ -22,7 +22,7 @@ import {
 import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/allocations")({
-  head: () => ({ meta: [{ title: "Allocations - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Allocations - Sampada" }] }),
   component: AllocationsPage,
 });
 

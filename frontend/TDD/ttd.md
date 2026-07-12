@@ -1,4 +1,4 @@
-# AssetFlow — Complete Technical Specification
+# Sampada — Complete Technical Specification
 ### Enterprise Asset & Resource Management System
 
 This document covers: user roles, complete data model (entities/rows/columns), and for every screen — expected **frontend behavior** and expected **backend working/logic** — so that nothing is ambiguous during build or demo.

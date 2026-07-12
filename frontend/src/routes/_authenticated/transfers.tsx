@@ -18,7 +18,7 @@ import {
 import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/transfers")({
-  head: () => ({ meta: [{ title: "Transfers - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Transfers - Sampada" }] }),
   component: TransfersPage,
 });
 

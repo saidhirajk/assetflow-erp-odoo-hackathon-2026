@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/reports")({
     if (!currentUser || !canView) throw redirect({ to: "/dashboard" });
     return { currentUser };
   },
-  head: () => ({ meta: [{ title: "Reports - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Reports - Sampada" }] }),
   component: ReportsPage,
 });
 

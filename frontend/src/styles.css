@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * AssetFlow — Enterprise ERP design system.
+ * Sampada — Enterprise ERP design system.
  * Deep slate palette, teal accent, high-density data UI.
  * All colors use oklch. Semantic tokens only in components.
  */
@@ -109,11 +109,17 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-feature-settings: "cv02","cv03","cv04","cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  html { color-scheme: dark; }
+
+  html {
+    color-scheme: dark;
+  }
 }

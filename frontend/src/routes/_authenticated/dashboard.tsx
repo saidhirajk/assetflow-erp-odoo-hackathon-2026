@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getDashboardOverviewCounts } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Sampada" }] }),
   component: Dashboard,
 });
 
