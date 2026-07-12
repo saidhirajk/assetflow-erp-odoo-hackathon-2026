@@ -43,6 +43,13 @@
 
 ## What I'm doing NOW
 
-Phase 1 only. After it works I'll continue with Phase 2, etc. Each phase = one focused turn. Say "continue" after each and I'll proceed to the next.
+Phase 2 has started, but in small safe slices.
+
+Current execution order:
+1. Keep the backend adapter as the only transport layer.
+2. Finish the Organization Setup screen contract.
+3. Build the Assets directory first as a read-only master-data view.
+4. Add asset registration and detail views after the directory is stable.
+5. Keep all future backend changes behind `src/lib/backend/app-backend.ts` so Supabase can be swapped later without UI churn.
 
 Sound good? If yes I'll start Phase 1 immediately.
