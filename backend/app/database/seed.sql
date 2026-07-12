@@ -449,3 +449,101 @@ VALUES
 	'Pending',
 	'Awaiting recheck after maintenance closure.'
 );
+
+-- Notifications
+
+INSERT INTO notifications (
+	user_id,
+	type,
+	message,
+	reference_id,
+	is_read,
+	created_at
+)
+VALUES
+(
+	(SELECT user_id FROM users WHERE email = 'sam.reed@assetflow.local'),
+	'AssetAssigned',
+	'Asset AF-0001 has been assigned to your department.',
+	'AF-0001',
+	FALSE,
+	'2026-07-01 09:45:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'nora.patel@assetflow.local'),
+	'BookingReminder',
+	'Your booking for AF-0002 starts in 30 minutes.',
+	'1',
+	FALSE,
+	'2026-07-12 09:30:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'admin@assetflow.local'),
+	'MaintenanceApproved',
+	'Maintenance request 1 has been approved.',
+	'1',
+	TRUE,
+	'2026-07-03 10:05:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'ethan.cole@assetflow.local'),
+	'TransferApproved',
+	'Transfer request for AF-0004 was approved.',
+	'4',
+	FALSE,
+	'2026-04-10 16:35:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'priya.nair@assetflow.local'),
+	'AuditDiscrepancy',
+	'Asset AF-0002 was marked damaged during the engineering audit.',
+	'2',
+	FALSE,
+	'2026-07-02 17:20:00'
+);
+
+-- Activity Logs
+
+INSERT INTO activity_logs (
+	user_id,
+	action,
+	entity_type,
+	entity_id,
+	timestamp
+)
+VALUES
+(
+	(SELECT user_id FROM users WHERE email = 'admin@assetflow.local'),
+	'Created department Engineering',
+	'Department',
+	'ENG',
+	'2026-07-01 08:15:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'sam.reed@assetflow.local'),
+	'Allocated Asset AF-0001 to Engineering',
+	'Asset',
+	'AF-0001',
+	'2026-01-12 10:00:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'nora.patel@assetflow.local'),
+	'Created booking for Asset AF-0002',
+	'Booking',
+	'1',
+	'2026-07-12 09:30:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'victor.lee@assetflow.local'),
+	'Submitted maintenance request for Asset AF-0003',
+	'Maintenance',
+	'2',
+	'2026-07-03 10:00:00'
+),
+(
+	(SELECT user_id FROM users WHERE email = 'admin@assetflow.local'),
+	'Closed audit cycle for HQ - Main Building',
+	'Audit',
+	'2',
+	'2026-06-20 18:00:00'
+);
