@@ -937,6 +937,12 @@ export async function getReportBookingHeatmap() {
   return callOperationRpc("get_report_booking_heatmap") as Promise<unknown>;
 }
 
+export async function getReportNearingRetirement(ageThresholdYears = 5) {
+  return callOperationRpc("get_report_nearing_retirement", {
+    _age_threshold_years: ageThresholdYears,
+  }) as Promise<unknown>;
+}
+
 // ── Phase 4: Activity Logs ──────────────────────────────────────
 
 export interface ActivityLogRecord {
