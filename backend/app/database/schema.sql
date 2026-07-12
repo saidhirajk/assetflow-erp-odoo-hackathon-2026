@@ -14,6 +14,8 @@ DROP TABLE IF EXISTS audit_cycles CASCADE;
 DROP TABLE IF EXISTS maintenance_requests CASCADE;
 DROP TABLE IF EXISTS bookings CASCADE;
 DROP TABLE IF EXISTS transfers CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS activity_logs CASCADE;
 
 ------------------------------------------------------------
 -- DEPARTMENTS
@@ -459,4 +461,70 @@ REFERENCES assets(asset_id);
 ALTER TABLE audit_items
 ADD CONSTRAINT fk_audit_item_marked_by
 FOREIGN KEY(marked_by_user_id)
+REFERENCES users(user_id);
+
+------------------------------------------------------------
+-- NOTIFICATIONS
+------------------------------------------------------------
+
+CREATE TABLE notifications (
+
+    notification_id SERIAL PRIMARY KEY,
+
+    user_id INTEGER NOT NULL,
+
+    type VARCHAR(30)
+        NOT NULL
+        CHECK (
+            type IN (
+                'AssetAssigned',
+                'MaintenanceApproved',
+                'MaintenanceRejected',
+                'BookingConfirmed',
+                'BookingCancelled',
+                'BookingReminder',
+                'TransferApproved',
+                'OverdueReturn',
+                'AuditDiscrepancy'
+            )
+        ),
+
+    message TEXT NOT NULL,
+
+    reference_id VARCHAR(100),
+
+    is_read BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+);
+
+ALTER TABLE notifications
+ADD CONSTRAINT fk_notification_user
+FOREIGN KEY(user_id)
+REFERENCES users(user_id);
+
+------------------------------------------------------------
+-- ACTIVITY LOGS
+------------------------------------------------------------
+
+CREATE TABLE activity_logs (
+
+    log_id SERIAL PRIMARY KEY,
+
+    user_id INTEGER NOT NULL,
+
+    action VARCHAR(255) NOT NULL,
+
+    entity_type VARCHAR(50) NOT NULL,
+
+    entity_id VARCHAR(100) NOT NULL,
+
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+);
+
+ALTER TABLE activity_logs
+ADD CONSTRAINT fk_activity_log_user
+FOREIGN KEY(user_id)
 REFERENCES users(user_id);
