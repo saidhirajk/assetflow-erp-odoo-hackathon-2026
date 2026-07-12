@@ -723,6 +723,7 @@ export async function markNotificationRead(id: string) {
   if (error) throw error;
 }
 
+
 export async function getDashboardOverviewCounts(): Promise<{
   available: number;
   allocated: number;
@@ -775,4 +776,202 @@ export async function getCurrentUserSnapshot(): Promise<BackendCurrentUser | nul
     profile: profileRes.data ?? null,
     roles: (rolesRes.data ?? []).map((row) => row.role as AppRole),
   };
+}
+
+// ── Phase 4: Audit Cycles ──────────────────────────────────────
+
+export interface AuditCycleRecord {
+  id: string;
+  name: string;
+  scope_department_id: string | null;
+  scope_location: string | null;
+  start_date: string;
+  end_date: string;
+  status: "draft" | "in_progress" | "closed";
+  created_by: string | null;
+  created_at: string;
+  closed_at: string | null;
+  department: { id: string; name: string } | null;
+  auditorCount: number;
+  itemCount: number;
+}
+
+export async function listAuditCycles(): Promise<AuditCycleRecord[]> {
+  const { data, error } = await supabase
+    .from("audit_cycles")
+    .select("id,name,scope_department_id,scope_location,start_date,end_date,status,created_by,created_at,closed_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<AuditCycleRecord, "department" | "auditorCount" | "itemCount">[];
+  const deptIds = uniqueIds(rows.map((r) => r.scope_department_id));
+  const deptMap = await mapDepartments(deptIds);
+
+  // Fetch auditor and item counts
+  const cycleIds = rows.map((r) => r.id);
+  const [auditorsRes, itemsRes] = await Promise.all([
+    cycleIds.length
+      ? supabase.from("audit_auditors").select("audit_id").in("audit_id", cycleIds)
+      : { data: [], error: null },
+    cycleIds.length
+      ? supabase.from("audit_items").select("audit_id").in("audit_id", cycleIds)
+      : { data: [], error: null },
+  ]);
+
+  const auditorCounts = new Map<string, number>();
+  for (const row of (auditorsRes.data ?? []) as { audit_id: string }[]) {
+    auditorCounts.set(row.audit_id, (auditorCounts.get(row.audit_id) ?? 0) + 1);
+  }
+  const itemCounts = new Map<string, number>();
+  for (const row of (itemsRes.data ?? []) as { audit_id: string }[]) {
+    itemCounts.set(row.audit_id, (itemCounts.get(row.audit_id) ?? 0) + 1);
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    status: r.status as AuditCycleRecord["status"],
+    department: r.scope_department_id ? deptMap.get(r.scope_department_id) ?? null : null,
+    auditorCount: auditorCounts.get(r.id) ?? 0,
+    itemCount: itemCounts.get(r.id) ?? 0,
+  }));
+}
+
+export interface AuditCycleCreateInput {
+  name: string;
+  scope_department_id: string | null;
+  scope_location: string | null;
+  start_date: string;
+  end_date: string;
+  auditor_ids: string[];
+}
+
+export async function createAuditCycle(input: AuditCycleCreateInput) {
+  return callOperationRpc("create_audit_cycle", {
+    _name: input.name,
+    _scope_department_id: input.scope_department_id,
+    _scope_location: input.scope_location,
+    _start_date: input.start_date,
+    _end_date: input.end_date,
+    _auditor_ids: input.auditor_ids,
+  });
+}
+
+export async function startAuditCycle(auditId: string) {
+  return callOperationRpc("start_audit_cycle", { _audit_id: auditId });
+}
+
+export async function closeAuditCycle(auditId: string) {
+  return callOperationRpc("close_audit_cycle", { _audit_id: auditId });
+}
+
+export interface AuditItemRecord {
+  id: string;
+  audit_id: string;
+  asset_id: string;
+  marked_by_user_id: string | null;
+  result: "pending" | "verified" | "missing" | "damaged";
+  notes: string | null;
+  updated_at: string;
+  asset: AssetDirectoryRecord | null;
+}
+
+export async function listAuditItems(auditId: string): Promise<AuditItemRecord[]> {
+  const { data, error } = await supabase
+    .from("audit_items")
+    .select("id,audit_id,asset_id,marked_by_user_id,result,notes,updated_at")
+    .eq("audit_id", auditId)
+    .order("updated_at", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<AuditItemRecord, "asset">[];
+  const assetMap = await mapAssets(uniqueIds(rows.map((r) => r.asset_id)));
+
+  return rows.map((r) => ({
+    ...r,
+    result: r.result as AuditItemRecord["result"],
+    asset: assetMap.get(r.asset_id) ?? null,
+  }));
+}
+
+export async function markAuditItem(itemId: string, result: AuditItemRecord["result"], notes: string) {
+  return callOperationRpc("mark_audit_item", {
+    _item_id: itemId,
+    _result: result,
+    _notes: notes,
+  });
+}
+
+export async function getAuditDiscrepancyReport(auditId: string) {
+  const { data, error } = await supabase
+    .from("audit_items")
+    .select("id,asset_id,result,notes,marked_by_user_id,updated_at")
+    .eq("audit_id", auditId)
+    .in("result", ["missing", "damaged"])
+    .order("result");
+  if (error) throw error;
+
+  const rows = data ?? [];
+  const assetMap = await mapAssets(uniqueIds(rows.map((r) => r.asset_id)));
+
+  return rows.map((r) => ({
+    ...r,
+    asset: assetMap.get(r.asset_id) ?? null,
+  }));
+}
+
+// ── Phase 4: Reports ──────────────────────────────────────
+
+export async function getReportUtilization() {
+  return callOperationRpc("get_report_utilization") as Promise<unknown>;
+}
+
+export async function getReportMaintenanceFrequency() {
+  return callOperationRpc("get_report_maintenance_frequency") as Promise<unknown>;
+}
+
+export async function getReportDepartmentAllocation() {
+  return callOperationRpc("get_report_department_allocation") as Promise<unknown>;
+}
+
+export async function getReportBookingHeatmap() {
+  return callOperationRpc("get_report_booking_heatmap") as Promise<unknown>;
+}
+
+// ── Phase 4: Activity Logs ──────────────────────────────────────
+
+export interface ActivityLogRecord {
+  id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  metadata: unknown;
+  created_at: string;
+  userName: string | null;
+}
+
+export async function listActivityLogs(filters?: {
+  entity_type?: string;
+  limit?: number;
+}): Promise<ActivityLogRecord[]> {
+  let query = supabase
+    .from("activity_logs")
+    .select("id,user_id,action,entity_type,entity_id,metadata,created_at")
+    .order("created_at", { ascending: false })
+    .limit(filters?.limit ?? 200);
+
+  if (filters?.entity_type) {
+    query = query.eq("entity_type", filters.entity_type);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<ActivityLogRecord, "userName">[];
+  const profileMap = await mapProfiles(uniqueIds(rows.map((r) => r.user_id)));
+
+  return rows.map((r) => ({
+    ...r,
+    userName: r.user_id ? profileMap.get(r.user_id)?.name ?? null : null,
+  }));
 }
