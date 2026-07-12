@@ -330,6 +330,328 @@ export async function listAssetMaintenanceHistory(assetId: string) {
   return data ?? [];
 }
 
+type RpcResult = { data: unknown; error: { message: string } | null };
+type RpcInvoker = (fn: string, args?: Record<string, unknown>) => Promise<RpcResult>;
+
+async function callOperationRpc(fn: string, args?: Record<string, unknown>) {
+  const rpc = supabase.rpc as unknown as RpcInvoker;
+  const { data, error } = await rpc(fn, args);
+  if (error) throw error;
+  return (data ?? {}) as Record<string, unknown>;
+}
+
+export interface PersonOption {
+  id: string;
+  name: string;
+  email: string;
+  department_id: string | null;
+}
+
+export async function listActivePeople(): Promise<PersonOption[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,name,email,department_id")
+    .eq("status", "active")
+    .order("name");
+  if (error) throw error;
+  return (data ?? []) as PersonOption[];
+}
+
+type NamedRecord = { id: string; name: string };
+type ProfileRecord = { id: string; name: string; email?: string | null };
+
+async function mapAssets(ids: string[]) {
+  if (!ids.length) return new Map<string, AssetDirectoryRecord>();
+  const { data, error } = await supabase
+    .from("assets")
+    .select("id,asset_tag,name,serial_number,qr_code,status,is_bookable,location,condition,category:asset_categories(id,name),department:departments(id,name)")
+    .in("id", ids);
+  if (error) throw error;
+  return new Map(
+    ((data ?? []) as AssetDirectoryRecord[]).map((asset) => [
+      asset.id,
+      {
+        ...asset,
+        category: Array.isArray(asset.category) ? asset.category[0] ?? null : asset.category,
+        department: Array.isArray(asset.department) ? asset.department[0] ?? null : asset.department,
+      },
+    ]),
+  );
+}
+
+async function mapProfiles(ids: string[]) {
+  if (!ids.length) return new Map<string, ProfileRecord>();
+  const { data, error } = await supabase.from("profiles").select("id,name,email").in("id", ids);
+  if (error) throw error;
+  return new Map(((data ?? []) as ProfileRecord[]).map((profile) => [profile.id, profile]));
+}
+
+async function mapDepartments(ids: string[]) {
+  if (!ids.length) return new Map<string, NamedRecord>();
+  const { data, error } = await supabase.from("departments").select("id,name").in("id", ids);
+  if (error) throw error;
+  return new Map(((data ?? []) as NamedRecord[]).map((department) => [department.id, department]));
+}
+
+function uniqueIds(ids: Array<string | null | undefined>) {
+  return Array.from(new Set(ids.filter((id): id is string => Boolean(id))));
+}
+
+export interface AllocationRecord {
+  id: string;
+  asset_id: string;
+  allocated_to_user_id: string | null;
+  allocated_to_department_id: string | null;
+  allocated_date: string;
+  expected_return_date: string | null;
+  actual_return_date: string | null;
+  return_condition_notes: string | null;
+  status: "active" | "returned" | "overdue";
+  asset: AssetDirectoryRecord | null;
+  allocatedToUser: ProfileRecord | null;
+  allocatedToDepartment: NamedRecord | null;
+}
+
+export async function listActiveAllocations(): Promise<AllocationRecord[]> {
+  await callOperationRpc("refresh_overdue_allocations");
+
+  const { data, error } = await supabase
+    .from("allocations")
+    .select("id,asset_id,allocated_to_user_id,allocated_to_department_id,allocated_date,expected_return_date,actual_return_date,return_condition_notes,status")
+    .in("status", ["active", "overdue"])
+    .order("allocated_date", { ascending: false });
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<AllocationRecord, "asset" | "allocatedToUser" | "allocatedToDepartment">[];
+  const [assets, profiles, departments] = await Promise.all([
+    mapAssets(uniqueIds(rows.map((row) => row.asset_id))),
+    mapProfiles(uniqueIds(rows.map((row) => row.allocated_to_user_id))),
+    mapDepartments(uniqueIds(rows.map((row) => row.allocated_to_department_id))),
+  ]);
+
+  return rows.map((row) => ({
+    ...row,
+    status: row.status as AllocationRecord["status"],
+    asset: assets.get(row.asset_id) ?? null,
+    allocatedToUser: row.allocated_to_user_id ? profiles.get(row.allocated_to_user_id) ?? null : null,
+    allocatedToDepartment: row.allocated_to_department_id ? departments.get(row.allocated_to_department_id) ?? null : null,
+  }));
+}
+
+export interface AllocationInput {
+  asset_id: string;
+  allocated_to_user_id: string | null;
+  allocated_to_department_id: string | null;
+  expected_return_date: string | null;
+}
+
+export async function allocateAsset(input: AllocationInput) {
+  return callOperationRpc("allocate_asset", {
+    _asset_id: input.asset_id,
+    _allocated_to_user_id: input.allocated_to_user_id,
+    _allocated_to_department_id: input.allocated_to_department_id,
+    _expected_return_date: input.expected_return_date,
+  });
+}
+
+export async function returnAllocation(allocationId: string, notes: string) {
+  return callOperationRpc("return_allocation", {
+    _allocation_id: allocationId,
+    _return_condition_notes: notes,
+  });
+}
+
+export interface TransferRecord {
+  id: string;
+  asset_id: string;
+  from_user_id: string | null;
+  to_user_id: string;
+  requested_by: string;
+  status: "requested" | "approved" | "rejected" | "completed";
+  approved_by: string | null;
+  reason: string | null;
+  requested_at: string;
+  resolved_at: string | null;
+  asset: AssetDirectoryRecord | null;
+  fromUser: ProfileRecord | null;
+  toUser: ProfileRecord | null;
+  requestedBy: ProfileRecord | null;
+}
+
+export async function listTransfers(): Promise<TransferRecord[]> {
+  const { data, error } = await supabase
+    .from("transfers")
+    .select("id,asset_id,from_user_id,to_user_id,requested_by,status,approved_by,reason,requested_at,resolved_at")
+    .order("requested_at", { ascending: false });
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<TransferRecord, "asset" | "fromUser" | "toUser" | "requestedBy">[];
+  const [assets, profiles] = await Promise.all([
+    mapAssets(uniqueIds(rows.map((row) => row.asset_id))),
+    mapProfiles(uniqueIds(rows.flatMap((row) => [row.from_user_id, row.to_user_id, row.requested_by]))),
+  ]);
+
+  return rows.map((row) => ({
+    ...row,
+    status: row.status as TransferRecord["status"],
+    asset: assets.get(row.asset_id) ?? null,
+    fromUser: row.from_user_id ? profiles.get(row.from_user_id) ?? null : null,
+    toUser: profiles.get(row.to_user_id) ?? null,
+    requestedBy: profiles.get(row.requested_by) ?? null,
+  }));
+}
+
+export async function requestAssetTransfer(assetId: string, toUserId: string, reason: string) {
+  return callOperationRpc("request_asset_transfer", {
+    _asset_id: assetId,
+    _to_user_id: toUserId,
+    _reason: reason,
+  });
+}
+
+export async function resolveAssetTransfer(transferId: string, approve: boolean) {
+  return callOperationRpc("resolve_asset_transfer", {
+    _transfer_id: transferId,
+    _approve: approve,
+  });
+}
+
+export interface BookingRecord {
+  id: string;
+  asset_id: string;
+  booked_by_user_id: string;
+  start_time: string;
+  end_time: string;
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  purpose: string | null;
+  created_at: string;
+  asset: AssetDirectoryRecord | null;
+  bookedBy: ProfileRecord | null;
+}
+
+export async function listBookableAssets(): Promise<AssetDirectoryRecord[]> {
+  const { data, error } = await supabase
+    .from("assets")
+    .select("id,asset_tag,name,serial_number,qr_code,status,is_bookable,location,condition,category:asset_categories(id,name),department:departments(id,name)")
+    .eq("is_bookable", true)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []).map((asset) => ({
+    ...asset,
+    status: asset.status as AssetDirectoryRecord["status"],
+    category: Array.isArray(asset.category) ? asset.category[0] ?? null : (asset.category as AssetDirectoryRecord["category"]),
+    department: Array.isArray(asset.department) ? asset.department[0] ?? null : (asset.department as AssetDirectoryRecord["department"]),
+  })) as AssetDirectoryRecord[];
+}
+
+export async function listBookings(): Promise<BookingRecord[]> {
+  await callOperationRpc("refresh_booking_statuses");
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id,asset_id,booked_by_user_id,start_time,end_time,status,purpose,created_at")
+    .order("start_time", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<BookingRecord, "asset" | "bookedBy">[];
+  const [assets, profiles] = await Promise.all([
+    mapAssets(uniqueIds(rows.map((row) => row.asset_id))),
+    mapProfiles(uniqueIds(rows.map((row) => row.booked_by_user_id))),
+  ]);
+
+  return rows.map((row) => ({
+    ...row,
+    status: row.status as BookingRecord["status"],
+    asset: assets.get(row.asset_id) ?? null,
+    bookedBy: profiles.get(row.booked_by_user_id) ?? null,
+  }));
+}
+
+export async function createBooking(input: {
+  asset_id: string;
+  start_time: string;
+  end_time: string;
+  purpose: string;
+}) {
+  return callOperationRpc("create_booking_checked", {
+    _asset_id: input.asset_id,
+    _start_time: input.start_time,
+    _end_time: input.end_time,
+    _purpose: input.purpose,
+  });
+}
+
+export async function cancelBooking(bookingId: string) {
+  return callOperationRpc("cancel_booking_checked", { _booking_id: bookingId });
+}
+
+export interface MaintenanceRequestRecord {
+  id: string;
+  asset_id: string;
+  raised_by_user_id: string;
+  issue_description: string;
+  priority: "low" | "medium" | "high" | "critical";
+  photo_url: string | null;
+  status: "pending" | "approved" | "rejected" | "technician_assigned" | "in_progress" | "resolved";
+  approved_by: string | null;
+  technician_name: string | null;
+  resolution_notes: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  asset: AssetDirectoryRecord | null;
+  raisedBy: ProfileRecord | null;
+}
+
+export async function listMaintenanceRequests(): Promise<MaintenanceRequestRecord[]> {
+  const { data, error } = await supabase
+    .from("maintenance_requests")
+    .select("id,asset_id,raised_by_user_id,issue_description,priority,photo_url,status,approved_by,technician_name,resolution_notes,created_at,resolved_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  const rows = (data ?? []) as Omit<MaintenanceRequestRecord, "asset" | "raisedBy">[];
+  const [assets, profiles] = await Promise.all([
+    mapAssets(uniqueIds(rows.map((row) => row.asset_id))),
+    mapProfiles(uniqueIds(rows.map((row) => row.raised_by_user_id))),
+  ]);
+
+  return rows.map((row) => ({
+    ...row,
+    priority: row.priority as MaintenanceRequestRecord["priority"],
+    status: row.status as MaintenanceRequestRecord["status"],
+    asset: assets.get(row.asset_id) ?? null,
+    raisedBy: profiles.get(row.raised_by_user_id) ?? null,
+  }));
+}
+
+export async function raiseMaintenanceRequest(input: {
+  asset_id: string;
+  issue_description: string;
+  priority: MaintenanceRequestRecord["priority"];
+  photo_url: string;
+}) {
+  return callOperationRpc("raise_maintenance_request", {
+    _asset_id: input.asset_id,
+    _issue_description: input.issue_description,
+    _priority: input.priority,
+    _photo_url: input.photo_url,
+  });
+}
+
+export async function updateMaintenanceStatus(input: {
+  request_id: string;
+  status: MaintenanceRequestRecord["status"];
+  technician_name?: string;
+  resolution_notes?: string;
+}) {
+  return callOperationRpc("update_maintenance_status", {
+    _request_id: input.request_id,
+    _status: input.status,
+    _technician_name: input.technician_name ?? "",
+    _resolution_notes: input.resolution_notes ?? "",
+  });
+}
+
 export interface EmployeeDirectoryRecord {
   id: string;
   name: string;
@@ -409,6 +731,11 @@ export async function getDashboardOverviewCounts(): Promise<{
   pendingTransfers: number;
   overdue: number;
 }> {
+  await Promise.all([
+    callOperationRpc("refresh_overdue_allocations"),
+    callOperationRpc("refresh_booking_statuses"),
+  ]);
+
   const now = new Date().toISOString();
 
   const [available, allocated, maintenance, activeBookings, pendingTransfers, overdueAlloc] = await Promise.all([
