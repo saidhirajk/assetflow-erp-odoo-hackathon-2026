@@ -15,10 +15,11 @@ export const Route = createFileRoute("/_authenticated/notifications")({
 
 function NotificationsPage() {
   const qc = useQueryClient();
-  const { data: items = [] } = useQuery({
+  const { data = [] } = useQuery({
     queryKey: ["notifications"],
-    queryFn: listNotifications,
+    queryFn: () => listNotifications(),
   });
+  const items = data as any[];
 
   const resolveHref = (notification: { type?: string; reference_type?: string | null }) => {
     switch (notification.reference_type ?? notification.type) {
@@ -45,8 +46,7 @@ function NotificationsPage() {
 
   const markAll = useMutation({
     mutationFn: async () => {
-      const { error } = await markAllNotificationsRead();
-      if (error) throw error;
+      await markAllNotificationsRead();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
