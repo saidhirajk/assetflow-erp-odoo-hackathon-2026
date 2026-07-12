@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   listAssetsForDirectory,
   listMaintenanceRequests,
@@ -23,6 +24,9 @@ export const Route = createFileRoute("/_authenticated/maintenance")({
 });
 
 function MaintenancePage() {
+  const { data: user } = useCurrentUser();
+  const role = user?.primaryRole;
+  const canApprove = role === "admin" || role === "asset_manager";
   const qc = useQueryClient();
   const [form, setForm] = useState({
     asset_id: "",
@@ -158,7 +162,7 @@ function MaintenancePage() {
             <RequestList
               requests={pending}
               empty="No pending maintenance requests."
-              action={(request) => (
+              action={canApprove ? (request) => (
                 <div className="flex gap-2">
                   <Button size="sm" disabled={statusMutation.isPending} onClick={() => statusMutation.mutate({ request, status: "approved" })}>
                     Approve
@@ -167,7 +171,7 @@ function MaintenancePage() {
                     Reject
                   </Button>
                 </div>
-              )}
+              ) : undefined}
             />
           </Card>
 
@@ -176,7 +180,7 @@ function MaintenancePage() {
             <RequestList
               requests={inProgress}
               empty="No maintenance work in progress."
-              action={(request) => (
+              action={canApprove ? (request) => (
                 <div className="grid gap-2 sm:w-80">
                   <Input
                     value={technicians[request.id] ?? request.technician_name ?? ""}
@@ -200,7 +204,7 @@ function MaintenancePage() {
                     </Button>
                   </div>
                 </div>
-              )}
+              ) : undefined}
             />
           </Card>
 

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   allocateAsset,
   listActiveAllocations,
@@ -26,6 +27,9 @@ export const Route = createFileRoute("/_authenticated/allocations")({
 });
 
 function AllocationsPage() {
+  const { data: user } = useCurrentUser();
+  const role = user?.primaryRole;
+  const canAllocate = role === "admin" || role === "asset_manager";
   const qc = useQueryClient();
   const [form, setForm] = useState({
     asset_id: "",
@@ -100,6 +104,7 @@ function AllocationsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+        {canAllocate ? (
         <Card className="space-y-4 p-4">
           <div>
             <h2 className="font-medium">Allocate asset</h2>
@@ -189,6 +194,11 @@ function AllocationsPage() {
             {allocateMutation.isPending ? "Allocating..." : "Allocate asset"}
           </Button>
         </Card>
+        ) : (
+          <Card className="flex items-center justify-center p-8">
+            <p className="text-sm text-muted-foreground">Only Admin and Asset Manager can allocate assets.</p>
+          </Card>
+        )}
 
         <Card className="space-y-4 p-4">
           <div>
