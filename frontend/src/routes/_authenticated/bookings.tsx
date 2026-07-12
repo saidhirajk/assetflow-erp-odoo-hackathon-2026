@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { cancelBooking, createBooking, listBookableAssets, listBookings } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
@@ -18,6 +19,10 @@ export const Route = createFileRoute("/_authenticated/bookings")({
 });
 
 function BookingsPage() {
+  const { data: user } = useCurrentUser();
+  const role = user?.primaryRole;
+  const currentUserId = user?.userId;
+  const canApprove = role === "admin" || role === "asset_manager";
   const qc = useQueryClient();
   const [form, setForm] = useState({ asset_id: "", start_time: "", end_time: "", purpose: "" });
   const [conflict, setConflict] = useState<Record<string, unknown> | null>(null);
@@ -161,7 +166,7 @@ function BookingsPage() {
                       {booking.purpose ? ` - ${booking.purpose}` : ""}
                     </div>
                   </div>
-                  {booking.status !== "cancelled" && booking.status !== "completed" ? (
+                  {booking.status !== "cancelled" && booking.status !== "completed" && (canApprove || booking.bookedBy?.id === currentUserId) ? (
                     <Button variant="outline" size="sm" disabled={cancelMutation.isPending} onClick={() => cancelMutation.mutate(booking.id)}>
                       Cancel
                     </Button>

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.deps import api_ok, get_current_user
+from app.database.connection import get_connection
 from .schemas import AllocationCreate, ReturnRequest
 from .repository import list_allocations, check_conflict, create_allocation, return_allocation
 
@@ -17,6 +18,8 @@ def get_allocations(
 
 @router.post("")
 def allocate_asset(payload: AllocationCreate, current_user=Depends(get_current_user)):
+    if current_user["role"] not in ("Admin", "Asset Manager"):
+        raise HTTPException(status_code=403, detail="Only Admin or Asset Manager can create allocations")
     asset_id = int(payload.asset_id)
     conflict = check_conflict(asset_id)
     if conflict:
@@ -32,6 +35,18 @@ def allocate_asset(payload: AllocationCreate, current_user=Depends(get_current_u
 
 @router.post("/{allocation_id}/return")
 def do_return(allocation_id: int, payload: ReturnRequest, current_user=Depends(get_current_user)):
+    if current_user["role"] not in ("Admin", "Asset Manager"):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT allocated_to_user_id FROM allocations WHERE allocation_id = %s",
+            (allocation_id,),
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if not row or str(row[0]) != str(current_user["user_id"]):
+            raise HTTPException(status_code=403, detail="Only the allocated employee, Admin, or Asset Manager can return an asset")
     result = return_allocation(allocation_id, payload.return_condition_notes)
     if not result:
         raise HTTPException(status_code=404, detail="Active allocation not found")

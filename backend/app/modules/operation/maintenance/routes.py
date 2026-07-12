@@ -23,6 +23,8 @@ def raise_request(payload: MaintenanceCreate, current_user=Depends(get_current_u
 
 @router.patch("/{request_id}")
 def update_status(request_id: int, payload: MaintenanceUpdate, current_user=Depends(get_current_user)):
+    if current_user["role"] not in ("Admin", "Asset Manager"):
+        raise HTTPException(status_code=403, detail="Only Admin or Asset Manager can update maintenance status")
     result = update_maintenance_status(
         request_id, payload.status, payload.technician_name,
         payload.resolution_notes, current_user["user_id"],

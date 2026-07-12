@@ -23,6 +23,8 @@ def request_transfer(payload: TransferRequest, current_user=Depends(get_current_
 
 @router.post("/{transfer_id}/resolve")
 def do_resolve(transfer_id: int, payload: TransferResolve, current_user=Depends(get_current_user)):
+    if current_user["role"] not in ("Admin", "Asset Manager", "Department Head"):
+        raise HTTPException(status_code=403, detail="Only Admin, Asset Manager, or Department Head can resolve transfers")
     result = resolve_transfer(transfer_id, payload.approve, current_user["user_id"])
     if not result:
         raise HTTPException(status_code=404, detail="Transfer not found")
