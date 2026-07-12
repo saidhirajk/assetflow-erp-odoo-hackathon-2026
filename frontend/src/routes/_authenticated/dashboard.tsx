@@ -73,7 +73,7 @@ function Dashboard() {
   const { data: user } = useCurrentUser();
   const isManager = hasRole(user, "admin", "asset_manager");
   const isDeptHead = hasRole(user, "department_head");
-  const isEmployee = hasRole(user, "employee");
+  const isEmployee = !isManager && !isDeptHead;
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats", user?.userId, user?.primaryRole],
     enabled: !!user,
