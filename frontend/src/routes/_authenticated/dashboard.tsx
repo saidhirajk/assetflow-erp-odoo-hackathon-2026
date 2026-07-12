@@ -36,7 +36,7 @@ function Dashboard() {
   const { data: user } = useCurrentUser();
   const isManager = hasRole(user, "admin", "asset_manager");
   const isDeptHead = hasRole(user, "department_head");
-
+  const isEmployee = hasRole(user, "employee");
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats", user?.userId, user?.primaryRole],
     enabled: !!user,
@@ -50,7 +50,11 @@ function Dashboard() {
           Welcome{user?.profile?.name ? `, ${user.profile.name.split(" ")[0]}` : ""}
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Live view of assets, allocations, bookings, and maintenance across the organization.
+          {isEmployee
+          ?"View your assets, bookings and maintenance requests."
+          : isDeptHead
+          ? "Manage your department assets and approvals."
+          : "Live view of assets, allocations, bookings and maintenance across the organization."}
         </p>
       </div>
 
