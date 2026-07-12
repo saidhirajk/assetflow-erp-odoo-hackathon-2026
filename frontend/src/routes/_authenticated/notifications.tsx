@@ -9,7 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { listNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
-  head: () => ({ meta: [{ title: "Notifications — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Notifications - Sampada" }] }),
   component: NotificationsPage,
 });
 

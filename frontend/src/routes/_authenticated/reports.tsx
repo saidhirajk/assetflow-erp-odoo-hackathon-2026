@@ -10,7 +10,7 @@ import { getReportsData, type ReportsData } from "@/lib/backend/app-backend";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/reports")({
-  head: () => ({ meta: [{ title: "Reports — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Reports - Sampada" }] }),
   component: ReportsPage,
 });
 

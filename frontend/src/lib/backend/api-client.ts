@@ -41,7 +41,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   try {
     response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   } catch {
-    throw new Error("Unable to reach the AssetFlow API. Check that the local backend is running.");
+    throw new Error("Unable to reach the Sampada API. Check that the local backend is running.");
   }
 
   const payload = await response.json().catch(() => null) as ApiResponse<T> | null;

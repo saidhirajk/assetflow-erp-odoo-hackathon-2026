@@ -21,7 +21,7 @@ import {
 } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/audits")({
-  head: () => ({ meta: [{ title: "Audits — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Audits - Sampada" }] }),
   component: AuditsPage,
 });
 
