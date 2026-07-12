@@ -334,8 +334,7 @@ type RpcResult = { data: unknown; error: { message: string } | null };
 type RpcInvoker = (fn: string, args?: Record<string, unknown>) => Promise<RpcResult>;
 
 async function callOperationRpc(fn: string, args?: Record<string, unknown>) {
-  const rpc = supabase.rpc as unknown as RpcInvoker;
-  const { data, error } = await rpc(fn, args);
+  const { data, error } = await supabase.rpc(fn as any, args);
   if (error) throw error;
   return (data ?? {}) as Record<string, unknown>;
 }
@@ -724,7 +723,10 @@ export async function markNotificationRead(id: string) {
 }
 
 
-export async function getDashboardOverviewCounts(): Promise<{
+export async function getDashboardOverviewCounts(
+  userId?: string,
+  role?: string
+): Promise<{
   available: number;
   allocated: number;
   maintenance: number;
@@ -738,14 +740,32 @@ export async function getDashboardOverviewCounts(): Promise<{
   ]);
 
   const now = new Date().toISOString();
+  const isEmployee = role === "employee";
+
+  let availableQ = supabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "available");
+  let allocatedQ = supabase.from("allocations").select("*", { count: "exact", head: true }).eq("status", "active");
+  let maintenanceQ = supabase.from("maintenance_requests").select("*", { count: "exact", head: true });
+  let activeBookingsQ = supabase.from("bookings").select("*", { count: "exact", head: true }).in("status", ["upcoming", "ongoing"]).gte("end_time", now);
+  let pendingTransfersQ = supabase.from("transfers").select("*", { count: "exact", head: true }).eq("status", "requested");
+  let overdueAllocQ = supabase.from("allocations").select("*", { count: "exact", head: true }).eq("status", "active").lt("expected_return_date", now.slice(0, 10));
+
+  if (isEmployee && userId) {
+    // Overwrite for personalized counts
+    allocatedQ = allocatedQ.eq("allocated_to_user_id", userId);
+    maintenanceQ = maintenanceQ.eq("raised_by_user_id", userId);
+    activeBookingsQ = activeBookingsQ.eq("booked_by_user_id", userId);
+    overdueAllocQ = overdueAllocQ.eq("allocated_to_user_id", userId);
+    // Transfers are already restricted by RLS for employees, but we can safely add it:
+    pendingTransfersQ = pendingTransfersQ.or(`requested_by.eq.${userId},to_user_id.eq.${userId},from_user_id.eq.${userId}`);
+  }
 
   const [available, allocated, maintenance, activeBookings, pendingTransfers, overdueAlloc] = await Promise.all([
-    supabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "available"),
-    supabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "allocated"),
-    supabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "under_maintenance"),
-    supabase.from("bookings").select("*", { count: "exact", head: true }).in("status", ["upcoming", "ongoing"]).gte("end_time", now),
-    supabase.from("transfers").select("*", { count: "exact", head: true }).eq("status", "requested"),
-    supabase.from("allocations").select("*", { count: "exact", head: true }).eq("status", "active").lt("expected_return_date", new Date().toISOString().slice(0, 10)),
+    availableQ,
+    allocatedQ,
+    maintenanceQ,
+    activeBookingsQ,
+    pendingTransfersQ,
+    overdueAllocQ,
   ]);
 
   return {

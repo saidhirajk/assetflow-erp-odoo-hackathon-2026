@@ -138,7 +138,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
   allocation_row public.allocations%ROWTYPE;
-  asset_tag text;
+  v_asset_tag text;
 BEGIN
   IF NOT (public.has_role(auth.uid(),'admin') OR public.has_role(auth.uid(),'asset_manager')) THEN
     RAISE EXCEPTION 'Only Admin or Asset Manager can return allocations';
@@ -162,10 +162,10 @@ BEGIN
   UPDATE public.assets
   SET status = 'available', current_holder_user_id = NULL
   WHERE id = allocation_row.asset_id
-  RETURNING asset_tag INTO asset_tag;
+  RETURNING asset_tag INTO v_asset_tag;
 
   PERFORM public.write_activity(
-    'Returned asset ' || COALESCE(asset_tag, allocation_row.asset_id::text),
+    'Returned asset ' || COALESCE(v_asset_tag, allocation_row.asset_id::text),
     'Allocation',
     _allocation_id::text,
     jsonb_build_object('asset_id', allocation_row.asset_id)
@@ -364,7 +364,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
   request_id uuid;
-  asset_tag text;
+  v_asset_tag text;
 BEGIN
   INSERT INTO public.maintenance_requests (
     asset_id,
@@ -377,8 +377,8 @@ BEGIN
   VALUES (_asset_id, auth.uid(), _issue_description, _priority, NULLIF(_photo_url, ''), 'pending')
   RETURNING id INTO request_id;
 
-  SELECT asset_tag INTO asset_tag FROM public.assets WHERE id = _asset_id;
-  PERFORM public.write_activity('Raised maintenance request for asset ' || COALESCE(asset_tag, _asset_id::text), 'Maintenance', request_id::text, jsonb_build_object('asset_id', _asset_id));
+  SELECT a.asset_tag INTO v_asset_tag FROM public.assets a WHERE a.id = _asset_id;
+  PERFORM public.write_activity('Raised maintenance request for asset ' || COALESCE(v_asset_tag, _asset_id::text), 'Maintenance', request_id::text, jsonb_build_object('asset_id', _asset_id));
 
   RETURN jsonb_build_object('ok', true, 'request_id', request_id);
 END $$;

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cancelBooking, createBooking, listBookableAssets, listBookings } from "@/lib/backend/app-backend";
+import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
   head: () => ({ meta: [{ title: "Bookings - AssetFlow" }] }),
@@ -21,6 +22,9 @@ export const Route = createFileRoute("/_authenticated/bookings")({
 
 function BookingsPage() {
   const qc = useQueryClient();
+  const { data: user } = useCurrentUser();
+  const isAdminOrMgr = hasRole(user, "admin", "asset_manager");
+
   const [form, setForm] = useState({ asset_id: "", start_time: "", end_time: "", purpose: "" });
   const [conflict, setConflict] = useState<Record<string, unknown> | null>(null);
 
@@ -199,63 +203,65 @@ function BookingsPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col gap-2">
-                      <Dialog open={rescheduleOpen === booking.id} onOpenChange={(open) => {
-                        if (open) {
-                          setRescheduleForm({
-                            start_time: new Date(booking.start_time).toISOString().slice(0, 16),
-                            end_time: new Date(booking.end_time).toISOString().slice(0, 16)
-                          });
-                          setRescheduleOpen(booking.id);
-                        } else {
-                          setRescheduleOpen(null);
-                        }
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">Reschedule</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Reschedule Booking</DialogTitle>
-                            <DialogDescription>Select a new time slot for this booking.</DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="space-y-2">
-                              <Label>Start Time</Label>
-                              <Input
-                                type="datetime-local"
-                                value={rescheduleForm.start_time}
-                                onChange={(e) => setRescheduleForm(prev => ({ ...prev, start_time: e.target.value }))}
-                              />
+                    {(isAdminOrMgr || booking.booked_by_user_id === user?.userId) && (
+                      <div className="flex flex-col gap-2">
+                        <Dialog open={rescheduleOpen === booking.id} onOpenChange={(open) => {
+                          if (open) {
+                            setRescheduleForm({
+                              start_time: new Date(booking.start_time).toISOString().slice(0, 16),
+                              end_time: new Date(booking.end_time).toISOString().slice(0, 16)
+                            });
+                            setRescheduleOpen(booking.id);
+                          } else {
+                            setRescheduleOpen(null);
+                          }
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">Reschedule</Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Reschedule Booking</DialogTitle>
+                              <DialogDescription>Select a new time slot for this booking.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                              <div className="space-y-2">
+                                <Label>Start Time</Label>
+                                <Input
+                                  type="datetime-local"
+                                  value={rescheduleForm.start_time}
+                                  onChange={(e) => setRescheduleForm(prev => ({ ...prev, start_time: e.target.value }))}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>End Time</Label>
+                                <Input
+                                  type="datetime-local"
+                                  value={rescheduleForm.end_time}
+                                  onChange={(e) => setRescheduleForm(prev => ({ ...prev, end_time: e.target.value }))}
+                                />
+                              </div>
                             </div>
-                            <div className="space-y-2">
-                              <Label>End Time</Label>
-                              <Input
-                                type="datetime-local"
-                                value={rescheduleForm.end_time}
-                                onChange={(e) => setRescheduleForm(prev => ({ ...prev, end_time: e.target.value }))}
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              onClick={() => rescheduleMutation.mutate({
-                                id: booking.id,
-                                asset_id: booking.asset_id,
-                                purpose: booking.purpose || ""
-                              })}
-                              disabled={rescheduleMutation.isPending || !rescheduleForm.start_time || !rescheduleForm.end_time}
-                            >
-                              Confirm Reschedule
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                            <DialogFooter>
+                              <Button
+                                onClick={() => rescheduleMutation.mutate({
+                                  id: booking.id,
+                                  asset_id: booking.asset_id,
+                                  purpose: booking.purpose || ""
+                                })}
+                                disabled={rescheduleMutation.isPending || !rescheduleForm.start_time || !rescheduleForm.end_time}
+                              >
+                                Confirm Reschedule
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
 
-                      <Button variant="outline" size="sm" disabled={cancelMutation.isPending} onClick={() => cancelMutation.mutate(booking.id)}>
-                        Cancel
-                      </Button>
-                    </div>
+                        <Button variant="outline" size="sm" disabled={cancelMutation.isPending} onClick={() => cancelMutation.mutate(booking.id)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (

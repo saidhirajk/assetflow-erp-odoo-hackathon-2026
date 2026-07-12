@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Check, AlertTriangle, AlertCircle, Calendar, ClipboardCheck } from "lucide-react";
@@ -26,10 +26,17 @@ import {
   listEmployeeDirectory,
   type AuditCycleRecord,
   type AuditItemRecord,
+  getCurrentUserSnapshot,
 } from "@/lib/backend/app-backend";
 import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/audits")({
+  beforeLoad: async () => {
+    const currentUser = await getCurrentUserSnapshot();
+    const canView = currentUser?.roles.some(r => ["admin", "asset_manager"].includes(r));
+    if (!currentUser || !canView) throw redirect({ to: "/dashboard" });
+    return { currentUser };
+  },
   head: () => ({ meta: [{ title: "Audits - AssetFlow" }] }),
   component: AuditsPage,
 });

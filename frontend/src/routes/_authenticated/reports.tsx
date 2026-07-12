@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -16,9 +16,16 @@ import {
   getReportDepartmentAllocation,
   getReportBookingHeatmap,
   getReportNearingRetirement,
+  getCurrentUserSnapshot,
 } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/reports")({
+  beforeLoad: async () => {
+    const currentUser = await getCurrentUserSnapshot();
+    const canView = currentUser?.roles.some(r => ["admin", "asset_manager", "department_head"].includes(r));
+    if (!currentUser || !canView) throw redirect({ to: "/dashboard" });
+    return { currentUser };
+  },
   head: () => ({ meta: [{ title: "Reports - AssetFlow" }] }),
   component: ReportsPage,
 });
