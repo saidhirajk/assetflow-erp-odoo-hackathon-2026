@@ -200,10 +200,10 @@ All accounts use password: **`password123`**
 
 ## Team
 
-- **Backend Lead & Integration** — Dhiraj
-- **Backend Developer** — 
-- **Frontend Developer** — 
-- **Frontend Developer** — 
+- Saidhiraj Kadwajiwar
+- Manish Nemade
+- Krish Agrawal
+- Isha Khatri
 
 ## License
 
