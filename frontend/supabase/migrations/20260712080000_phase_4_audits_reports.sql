@@ -290,3 +290,36 @@ AS $$
     ORDER BY day_of_week, hour_of_day
   ) t
 $$;
+
+-- ============ REPORT — NEARING RETIREMENT ============
+-- Returns assets that have been in service for more than 5 years
+-- (configurable threshold: acquisition_date older than now - interval)
+CREATE OR REPLACE FUNCTION public.get_report_nearing_retirement(
+  _age_threshold_years int DEFAULT 5
+)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT COALESCE(jsonb_agg(row_to_json(t)), '[]'::jsonb)
+  FROM (
+    SELECT
+      a.id,
+      a.asset_tag,
+      a.name,
+      a.acquisition_date,
+      a.acquisition_cost,
+      a.status,
+      a.condition,
+      c.name AS category_name,
+      d.name AS department_name,
+      DATE_PART('year', AGE(NOW(), a.acquisition_date::timestamp))::int AS age_years
+    FROM public.assets a
+    LEFT JOIN public.asset_categories c ON c.id = a.category_id
+    LEFT JOIN public.departments d ON d.id = a.department_id
+    WHERE
+      a.status NOT IN ('retired', 'disposed', 'lost')
+      AND a.acquisition_date IS NOT NULL
+      AND a.acquisition_date <= (CURRENT_DATE - (_age_threshold_years || ' years')::interval)
+    ORDER BY a.acquisition_date ASC
+    LIMIT 50
+  ) t
+$$;
