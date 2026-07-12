@@ -15,7 +15,6 @@ import {
   requestAssetTransfer,
   resolveAssetTransfer,
 } from "@/lib/backend/app-backend";
-import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/transfers")({
   head: () => ({ meta: [{ title: "Transfers - AssetFlow" }] }),
@@ -24,9 +23,6 @@ export const Route = createFileRoute("/_authenticated/transfers")({
 
 function TransfersPage() {
   const qc = useQueryClient();
-  const { data: user } = useCurrentUser();
-  const canApprove = hasRole(user, "admin", "asset_manager", "department_head");
-
   const [form, setForm] = useState({ asset_id: "", to_user_id: "", reason: "" });
 
   const transfersQuery = useQuery({ queryKey: ["transfers"], queryFn: listTransfers });
@@ -145,25 +141,23 @@ function TransfersPage() {
                       </div>
                       {transfer.reason ? <p className="mt-2 text-sm">{transfer.reason}</p> : null}
                     </div>
-                    {canApprove && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => resolveMutation.mutate({ transferId: transfer.id, approve: true })}
-                          disabled={resolveMutation.isPending}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => resolveMutation.mutate({ transferId: transfer.id, approve: false })}
-                          disabled={resolveMutation.isPending}
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => resolveMutation.mutate({ transferId: transfer.id, approve: true })}
+                        disabled={resolveMutation.isPending}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resolveMutation.mutate({ transferId: transfer.id, approve: false })}
+                        disabled={resolveMutation.isPending}
+                      >
+                        Reject
+                      </Button>
+                    </div>
                   </div>
                 ))
               ) : (

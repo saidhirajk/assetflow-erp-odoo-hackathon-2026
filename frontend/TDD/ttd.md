@@ -329,9 +329,7 @@ Overdue panel queries `allocations.status='Overdue'` and `bookings` past due, sc
 8. Every write across every module produces exactly one `activity_logs` row.
 9. Department/category/user deactivation is always a soft update (`status` field), never a hard delete, since historical records reference these rows.
 10. All list/report data must be scoped by role (Admin/Asset Manager = org-wide, Department Head = own department, Employee = own records) at the query level, not filtered only in the frontend.
-11. Current backend note: Supabase is only a temporary development backend. All data access must stay behind a thin repository/service/API layer so the app can later switch to a real backend without changing UI screens, routes, or business rules. Do not spread Supabase calls directly through components; keep the code backend-agnostic and preserve the same request/response shapes where possible.
-
-For the practical migration playbook, see [supabase-to-real-backend-migration.md](supabase-to-real-backend-migration.md).
+11. Current backend note: FastAPI and local PostgreSQL are the only backend stack. All data access stays behind a thin API adapter so UI screens, routes, and business rules remain stable. Do not spread direct HTTP calls through components; preserve the adapter request and response shapes where possible.
 For the stable implementation companion, see [project-stability-guide.md](project-stability-guide.md).
 
 ---

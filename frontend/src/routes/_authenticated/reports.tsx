@@ -1,48 +1,25 @@
-import { useCallback, useMemo } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell,
-} from "recharts";
-import { Download } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  getReportUtilization,
-  getReportMaintenanceFrequency,
-  getReportDepartmentAllocation,
-  getReportBookingHeatmap,
-  getReportNearingRetirement,
-  getCurrentUserSnapshot,
-} from "@/lib/backend/app-backend";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { Download } from "lucide-react";
+import { getReportsData, type ReportsData } from "@/lib/backend/app-backend";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/reports")({
-  beforeLoad: async () => {
-    const currentUser = await getCurrentUserSnapshot();
-    const canView = currentUser?.roles.some(r => ["admin", "asset_manager", "department_head"].includes(r));
-    if (!currentUser || !canView) throw redirect({ to: "/dashboard" });
-    return { currentUser };
-  },
-  head: () => ({ meta: [{ title: "Reports - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Reports — AssetFlow" }] }),
   component: ReportsPage,
 });
 
-const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
 
-// ── CSV helpers ─────────────────────────────────────────────────
-function exportCsv(filename: string, rows: Record<string, unknown>[]) {
-  if (!rows.length) return;
-  const keys = Object.keys(rows[0]);
-  const lines = [
-    keys.join(","),
-    ...rows.map((r) =>
-      keys.map((k) => JSON.stringify(r[k] ?? "")).join(",")
-    ),
-  ];
-  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+function exportCSV(data: Record<string, unknown>[], filename: string) {
+  if (!data.length) return;
+  const csv = [Object.keys(data[0]).join(",")].concat(data.map((r) => Object.values(r).join(","))).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -51,262 +28,202 @@ function exportCsv(filename: string, rows: Record<string, unknown>[]) {
   URL.revokeObjectURL(url);
 }
 
-function ExportButton({ data, filename }: { data: unknown[]; filename: string }) {
-  const handleClick = useCallback(() => {
-    exportCsv(filename, data as Record<string, unknown>[]);
-  }, [data, filename]);
-
-  return (
-    <Button variant="outline" size="sm" onClick={handleClick} disabled={!data.length} id={`export-${filename}`}>
-      <Download className="mr-1.5 h-3.5 w-3.5" />
-      Export CSV
-    </Button>
-  );
-}
-
-// ── Main page ────────────────────────────────────────────────────
 function ReportsPage() {
-  const utilQuery = useQuery({ queryKey: ["report-utilization"], queryFn: getReportUtilization });
-  const maintQuery = useQuery({ queryKey: ["report-maintenance"], queryFn: getReportMaintenanceFrequency });
-  const deptQuery = useQuery({ queryKey: ["report-department"], queryFn: getReportDepartmentAllocation });
-  const heatmapQuery = useQuery({ queryKey: ["report-heatmap"], queryFn: getReportBookingHeatmap });
-  const retirementQuery = useQuery({ queryKey: ["report-retirement"], queryFn: () => getReportNearingRetirement(5) });
+  const { data, isLoading } = useQuery({ queryKey: ["reports"], queryFn: getReportsData });
+  const { data: user } = useCurrentUser();
 
-  const utilData = (utilQuery.data as any[]) ?? [];
-  const maintData = (maintQuery.data as any[]) ?? [];
-  const deptData = (deptQuery.data as any[]) ?? [];
-  const heatmapData = (heatmapQuery.data as any[]) ?? [];
-  const retirementData = (retirementQuery.data as any[]) ?? [];
+  if (isLoading) return <div className="space-y-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div>;
+  if (!data) return null;
 
-  // Heatmap processing
-  const heatmapMatrix = useMemo(() => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-    const matrix = days.map((day) => ({ day, hours: hours.map(() => 0) }));
-    let max = 0;
-    heatmapData.forEach((row: any) => {
-      const d = row.day_of_week;
-      const h = row.hour_of_day;
-      const c = Number(row.booking_count);
-      if (matrix[d]) matrix[d].hours[h] = c;
-      if (c > max) max = c;
-    });
-    return { matrix, max };
-  }, [heatmapData]);
+  const d = data as ReportsData;
+  const isEmployee = d.scope === "employee";
+  const isDeptHead = d.scope === "department_head";
+  const scopeLabel = isEmployee ? "Your" : isDeptHead ? "Department" : "All";
 
   return (
     <div className="max-w-7xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reports & Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Insights into asset utilization, maintenance, department allocations, and lifecycle.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Reports & Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isEmployee
+              ? "Your asset and activity summary."
+              : isDeptHead
+              ? "Insights for your department."
+              : "Insights across all asset modules."}
+          </p>
+        </div>
+        {!isEmployee && (
+          <Button variant="outline" size="sm" onClick={() => exportCSV(d.departmentSummary, "assetflow-report.csv")}>
+            <Download className="h-4 w-4 mr-1" /> Export CSV
+          </Button>
+        )}
+      </div>
+
+      {/* Overall Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {[
+          { label: "Total Assets", value: d.overallStats.totalAssets },
+          { label: "Allocated", value: d.overallStats.totalAllocated },
+          { label: "Open Maintenance", value: d.overallStats.openMaintenance },
+          { label: "Active Bookings", value: d.overallStats.activeBookings },
+        ].map((s) => (
+          <Card key={s.label} className="p-4 text-center">
+            <div className="text-3xl font-bold">{s.value}</div>
+            <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
+          </Card>
+        ))}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* ── Utilization Chart ── */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">Top 10 Most Utilized Assets</CardTitle>
-              <CardDescription>Based on total allocations and bookings</CardDescription>
-            </div>
-            <ExportButton data={utilData} filename="utilization.csv" />
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {utilQuery.isLoading ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground">Loading...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={utilData.slice(0, 10)} margin={{ top: 5, right: 20, bottom: 25, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                  <XAxis dataKey="asset_name" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                  <RechartsTooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ borderRadius: "6px", border: "1px solid hsl(var(--border))" }} />
-                  <Bar dataKey="allocation_count" name="Allocations" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 4, 4]} />
-                  <Bar dataKey="booking_count" name="Bookings" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+        {/* Department Summary */}
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-medium">{isEmployee ? "Your Assets by Department" : "Department-wise Allocation"}</h2>
+            {!isEmployee && (
+              <Button variant="ghost" size="sm" onClick={() => exportCSV(d.departmentSummary, "dept-summary.csv")}>
+                <Download className="h-3 w-3" />
+              </Button>
             )}
-          </CardContent>
+          </div>
+          {d.departmentSummary.length ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={d.departmentSummary}>
+                <XAxis dataKey="department" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="allocated" fill="#3b82f6" name="Allocated" />
+                <Bar dataKey="available" fill="#22c55e" name="Available" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-muted-foreground">No data</p>}
         </Card>
 
-        {/* ── Maintenance Frequency ── */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">Maintenance Frequency by Category</CardTitle>
-              <CardDescription>Total maintenance requests</CardDescription>
-            </div>
-            <ExportButton data={maintData} filename="maintenance_frequency.csv" />
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {maintQuery.isLoading ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground">Loading...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={maintData} margin={{ top: 5, right: 20, bottom: 25, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                  <XAxis dataKey="category_name" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                  <RechartsTooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ borderRadius: "6px", border: "1px solid hsl(var(--border))" }} />
-                  <Bar dataKey="request_count" name="Total Requests" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="high_priority_count" name="High/Critical" fill="#7f1d1d" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
+        {/* Category Distribution */}
+        <Card className="p-4 space-y-3">
+          <h2 className="font-medium">{scopeLabel} Asset Categories</h2>
+          {d.categoryDistribution.length ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={d.categoryDistribution} dataKey="count" nameKey="category" cx="50%" cy="50%" outerRadius={80} label>
+                  {d.categoryDistribution.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-muted-foreground">No data</p>}
         </Card>
 
-        {/* ── Department Allocation Pie ── */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">Department Allocations</CardTitle>
-              <CardDescription>Active allocations by department</CardDescription>
-            </div>
-            <ExportButton data={deptData} filename="department_allocations.csv" />
-          </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
-            {deptQuery.isLoading ? (
-              <div className="text-muted-foreground">Loading...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={deptData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="active_allocation_count"
-                    nameKey="department_name"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={true}
-                  >
-                    {deptData.map((_entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip contentStyle={{ borderRadius: "6px", border: "1px solid hsl(var(--border))" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
+        {/* Status Breakdown */}
+        <Card className="p-4 space-y-3">
+          <h2 className="font-medium">{scopeLabel} Asset Status Breakdown</h2>
+          {d.statusBreakdown.length ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={d.statusBreakdown}>
+                <XAxis dataKey="status" fontSize={11} />
+                <YAxis fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8b5cf6">
+                  {d.statusBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-muted-foreground">No data</p>}
         </Card>
 
-        {/* ── Booking Heatmap ── */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">Booking Density Heatmap</CardTitle>
-              <CardDescription>Reservations by day of week and hour</CardDescription>
-            </div>
-            <ExportButton data={heatmapData} filename="booking_heatmap.csv" />
-          </CardHeader>
-          <CardContent>
-            {heatmapQuery.isLoading ? (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">Loading...</div>
-            ) : (
-              <div className="overflow-x-auto pb-4">
-                <div className="min-w-[600px]">
-                  <div className="flex mb-1">
-                    <div className="w-12" />
-                    {Array.from({ length: 24 }).map((_, i) => (
-                      <div key={i} className="flex-1 text-[10px] text-center text-muted-foreground">
-                        {i % 4 === 0 ? `${i}h` : ""}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="space-y-1">
-                    {heatmapMatrix.matrix.map((row, i) => (
-                      <div key={i} className="flex items-center gap-1">
-                        <div className="w-12 text-xs font-medium text-muted-foreground">{row.day}</div>
-                        {row.hours.map((val, h) => {
-                          const intensity = heatmapMatrix.max > 0 ? val / heatmapMatrix.max : 0;
-                          return (
-                            <div
-                              key={h}
-                              className="flex-1 aspect-square rounded-sm transition-colors duration-200"
-                              style={{
-                                backgroundColor:
-                                  val === 0
-                                    ? "hsl(var(--muted)/0.3)"
-                                    : `rgba(16, 185, 129, ${Math.max(0.2, intensity)})`,
-                              }}
-                              title={`${row.day} ${h}:00 — ${val} bookings`}
-                            />
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
+        {/* Maintenance Frequency */}
+        <Card className="p-4 space-y-3">
+          <h2 className="font-medium">{scopeLabel} Maintenance by Category</h2>
+          {d.maintenanceFrequency.length ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={d.maintenanceFrequency}>
+                <XAxis dataKey="category" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
+                <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-muted-foreground">No data</p>}
         </Card>
       </div>
 
-      {/* ── Nearing Retirement ── (full width) */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardHeader className="flex flex-row items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <span>Nearing Retirement</span>
-              <Badge variant="outline" className="border-amber-500/50 text-amber-600 text-xs font-normal">
-                ≥ 5 years in service
-              </Badge>
-            </CardTitle>
-            <CardDescription>Assets that may need replacement soon</CardDescription>
-          </div>
-          <ExportButton data={retirementData} filename="nearing_retirement.csv" />
-        </CardHeader>
-        <CardContent>
-          {retirementQuery.isLoading ? (
-            <div className="py-8 text-center text-muted-foreground text-sm">Loading...</div>
-          ) : retirementData.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground text-sm border border-dashed rounded-md">
-              No assets nearing retirement.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground text-xs uppercase tracking-wide">
-                    <th className="pb-2 pr-4 font-medium">Tag</th>
-                    <th className="pb-2 pr-4 font-medium">Asset</th>
-                    <th className="pb-2 pr-4 font-medium">Category</th>
-                    <th className="pb-2 pr-4 font-medium">Department</th>
-                    <th className="pb-2 pr-4 font-medium">Acquired</th>
-                    <th className="pb-2 pr-4 font-medium">Age</th>
-                    <th className="pb-2 pr-4 font-medium">Condition</th>
-                    <th className="pb-2 font-medium">Status</th>
+      {/* Nearing Retirement */}
+      <Card className="p-4 space-y-3">
+        <h2 className="font-medium">{scopeLabel} Nearing Retirement (5+ years old)</h2>
+        {d.nearingRetirement.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/70 text-left text-xs text-muted-foreground">
+                  <th className="pb-2 font-semibold">Asset Tag</th>
+                  <th className="pb-2 font-semibold">Name</th>
+                  <th className="pb-2 font-semibold">Category</th>
+                  <th className="pb-2 font-semibold">Condition</th>
+                  <th className="pb-2 font-semibold">Acquired</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.nearingRetirement.map((a) => (
+                  <tr key={a.asset_tag} className="border-b border-border/30">
+                    <td className="py-2 font-mono text-xs">{a.asset_tag}</td>
+                    <td className="py-2">{a.name}</td>
+                    <td className="py-2 text-muted-foreground">{a.category}</td>
+                    <td className="py-2"><Badge variant="outline">{a.condition}</Badge></td>
+                    <td className="py-2 text-muted-foreground">{a.acquisition_date}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {retirementData.map((row: any) => (
-                    <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{row.asset_tag}</td>
-                      <td className="py-2 pr-4 font-medium">{row.name}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{row.category_name ?? "—"}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{row.department_name ?? "—"}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{row.acquisition_date}</td>
-                      <td className="py-2 pr-4">
-                        <Badge variant="outline" className="border-amber-500/50 text-amber-600">
-                          {row.age_years}y
-                        </Badge>
-                      </td>
-                      <td className="py-2 pr-4 capitalize text-muted-foreground">{row.condition}</td>
-                      <td className="py-2 capitalize text-muted-foreground">{row.status}</td>
-                    </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-sm text-muted-foreground">No assets nearing retirement.</p>}
+      </Card>
+
+      {/* Booking Heatmap */}
+      <Card className="p-4 space-y-3">
+        <h2 className="font-medium">{scopeLabel} Booking Heatmap (by hour of day)</h2>
+        {d.bookingHeatmap.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="pb-2 font-semibold">Hour</th>
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                    <th key={d} className="pb-2 font-semibold text-center px-2">{d}</th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 24 }, (_, h) => (
+                  <tr key={h}>
+                    <td className="py-1 text-muted-foreground">{String(h).padStart(2, "0")}:00</td>
+                    {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                      const cell = d.bookingHeatmap.find((b) => b.hour === h && b.day === day);
+                      const count = cell?.count ?? 0;
+                      const intensity = Math.min(count / 5, 1);
+                      return (
+                        <td key={day} className="text-center px-1 py-1">
+                          <div
+                            className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-medium"
+                            style={{
+                              backgroundColor: count > 0
+                                ? `rgba(59, 130, 246, ${0.15 + intensity * 0.85})`
+                                : "transparent",
+                              color: intensity > 0.5 ? "white" : undefined,
+                            }}
+                          >
+                            {count > 0 ? count : ""}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-sm text-muted-foreground">No booking data yet.</p>}
       </Card>
     </div>
   );

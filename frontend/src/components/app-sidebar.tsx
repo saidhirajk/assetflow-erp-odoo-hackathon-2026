@@ -14,12 +14,12 @@ type NavItem = { title: string; url: string; icon: React.ComponentType<{ classNa
 const mainNav: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Assets", url: "/assets", icon: Package },
-  { title: "Allocations", url: "/allocations", icon: Users, roles: ["admin","asset_manager","department_head"] },
-  { title: "Transfers", url: "/transfers", icon: ArrowLeftRight, roles: ["admin","asset_manager","department_head"] },
+  { title: "Allocations", url: "/allocations", icon: Users },
+  { title: "Transfers", url: "/transfers", icon: ArrowLeftRight },
   { title: "Bookings", url: "/bookings", icon: Calendar },
-  { title: "Maintenance", url: "/maintenance", icon: Wrench, roles: ["admin","asset_manager","department_head"] },
+  { title: "Maintenance", url: "/maintenance", icon: Wrench },
   { title: "Audits", url: "/audits", icon: ClipboardCheck, roles: ["admin","asset_manager"] },
-  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin","asset_manager","department_head"] },
+  { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
 const adminNav: NavItem[] = [

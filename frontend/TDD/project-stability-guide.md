@@ -3,7 +3,7 @@
 ## Purpose
 This file exists so future implementation work stays stable.
 
-Use it when adding features, fixing bugs, or replacing Supabase with a real backend.
+Use it when adding features, fixing bugs, or extending the local FastAPI backend.
 
 The goal is to avoid breaking the current flow while still keeping the code easy to change later.
 
@@ -11,7 +11,7 @@ The goal is to avoid breaking the current flow while still keeping the code easy
 This is a React + TanStack Router app with a backend adapter layer.
 
 Important current files:
-- `src/lib/backend/app-backend.ts` is the main backend-facing adapter used by the UI.
+- `src/lib/backend/app-backend.ts` is the main FastAPI-facing adapter used by the UI.
 - `src/routes/auth.tsx` handles login/signup.
 - `src/routes/_authenticated/route.tsx` protects authenticated routes.
 - `src/routes/_authenticated/dashboard.tsx` shows summary counts.
@@ -28,7 +28,7 @@ Keep these rules intact during implementation:
 5. Do not change route behavior unless the feature truly requires it.
 6. Keep backend access behind `src/lib/backend/app-backend.ts`.
 7. Keep response shapes plain and predictable.
-8. Keep Supabase-specific code isolated so it can be swapped later.
+8. Keep all HTTP transport details inside the adapter layer.
 
 ## Current Non-Breakable Flows
 These flows should remain stable unless explicitly changing the feature:
@@ -48,7 +48,7 @@ The app already relies on these rules:
 - role changes are admin-only through the organization setup flow
 - allocations, bookings, maintenance, and audits follow server-side business rules
 - dashboard and notifications should read from backend helpers, not direct component fetches
-- backend swap should happen in the adapter, not in the UI
+- backend changes should happen in the adapter, not in the UI
 
 ## Implementation Order
 When making changes, follow this order:
@@ -62,14 +62,14 @@ When making changes, follow this order:
 ## What To Avoid
 Avoid these patterns because they make future backend integration harder:
 
-- direct Supabase calls in new components
+- direct HTTP calls in new components
 - duplicated API logic across routes
 - deeply nested service layers
 - custom wrappers around tiny one-line operations
 - changing data shape per screen
 
-## Backend Swap Safety Check
-Before considering the project ready for a real backend, confirm:
+## Backend Integration Safety Check
+Before considering the project ready for a demo, confirm:
 
 - auth still works
 - authenticated routes still redirect correctly

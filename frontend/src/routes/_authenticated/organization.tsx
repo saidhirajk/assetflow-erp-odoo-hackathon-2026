@@ -415,9 +415,17 @@ function OrganizationSetupPage() {
                         {category.status}
                       </Badge>
                     </div>
-                    <pre className="mt-3 overflow-auto rounded bg-muted/30 p-3 text-xs text-muted-foreground">
-                      {JSON.stringify(category.custom_fields ?? [], null, 2)}
-                    </pre>
+                    {category.custom_fields?.length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {category.custom_fields.map((f, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {f.name} <span className="ml-1 text-muted-foreground">({f.type.charAt(0).toUpperCase() + f.type.slice(1)})</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted-foreground">No custom fields</p>
+                    )}
                     <div className="mt-3 flex gap-2">
                       <Button
                         variant="outline"

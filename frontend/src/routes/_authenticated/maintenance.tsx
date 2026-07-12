@@ -16,7 +16,6 @@ import {
   updateMaintenanceStatus,
   type MaintenanceRequestRecord,
 } from "@/lib/backend/app-backend";
-import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/maintenance")({
   head: () => ({ meta: [{ title: "Maintenance - AssetFlow" }] }),
@@ -25,9 +24,6 @@ export const Route = createFileRoute("/_authenticated/maintenance")({
 
 function MaintenancePage() {
   const qc = useQueryClient();
-  const { data: user } = useCurrentUser();
-  const isAdminOrMgr = hasRole(user, "admin", "asset_manager");
-
   const [form, setForm] = useState({
     asset_id: "",
     issue_description: "",
@@ -79,11 +75,7 @@ function MaintenancePage() {
   const inProgress = requests.filter((request) =>
     ["approved", "technician_assigned", "in_progress"].includes(request.status),
   );
-  const closed = requests.filter(
-    (request) =>
-      ["rejected", "resolved"].includes(request.status) &&
-      (isAdminOrMgr || request.raised_by_user_id === user?.userId)
-  );
+  const closed = requests.filter((request) => ["rejected", "resolved"].includes(request.status));
 
   return (
     <div className="max-w-7xl space-y-6">
@@ -158,10 +150,8 @@ function MaintenancePage() {
         </Card>
 
         <div className="space-y-4">
-          {isAdminOrMgr && (
-            <>
-              <Card className="space-y-4 p-4">
-                <div>
+          <Card className="space-y-4 p-4">
+            <div>
               <h2 className="font-medium">Approval queue</h2>
               <p className="text-sm text-muted-foreground">Approval is the exact moment the asset enters Under Maintenance.</p>
             </div>
@@ -213,8 +203,6 @@ function MaintenancePage() {
               )}
             />
           </Card>
-          </>
-          )}
 
           <Card className="space-y-4 p-4">
             <h2 className="font-medium">Closed requests</h2>

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { hasRole, useCurrentUser } from "@/hooks/use-current-user";
 import {
-  Package, Users, Calendar, Wrench, ArrowLeftRight, AlertTriangle, Clock, CheckCircle2, ChevronRight
+  Package, Users, Calendar, Wrench, ArrowLeftRight, AlertTriangle, Clock, CheckCircle2,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -14,58 +14,21 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-function Kpi({ label, value, icon: Icon, tone, href }: {
+function Kpi({ label, value, icon: Icon, tone }: {
   label: string; value: number | string; icon: React.ComponentType<{ className?: string }>;
-  tone?: "default" | "warning" | "success" | "primary";
-  href?: string;
+  tone?: "default" | "warning" | "success";
 }) {
-  const toneCls = tone === "warning" ? "text-amber-500 bg-amber-500/10" 
-    : tone === "success" ? "text-emerald-500 bg-emerald-500/10" 
-    : tone === "primary" ? "text-primary bg-primary/10"
-    : "text-blue-500 bg-blue-500/10";
-  
-  const content = (
-    <Card className={`p-5 relative overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${href ? 'cursor-pointer hover:border-primary/50' : ''}`}>
-      <div className="flex items-start justify-between relative z-10">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-          <div className="mt-3 text-3xl font-bold tabular-nums tracking-tight">{value}</div>
-        </div>
-        <div className={`p-2.5 rounded-xl ${toneCls}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-      {/* Decorative subtle background element */}
-      <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full opacity-[0.03] ${toneCls.split(' ')[0]}`} />
-    </Card>
-  );
-
-  if (href) {
-    return <Link to={href} className="block">{content}</Link>;
-  }
-  return content;
-}
-
-function ActionCard({ title, description, icon: Icon, href, colorClass }: {
-  title: string; description: string; icon: React.ComponentType<{ className?: string }>; href: string; colorClass: string;
-}) {
+  const toneCls = tone === "warning" ? "text-warning" : tone === "success" ? "text-success" : "text-primary";
   return (
-    <Link to={href} className="block group h-full">
-      <Card className="h-full p-6 relative overflow-hidden border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-gradient-to-br from-background to-muted/30">
-        <div className="flex items-start gap-4 relative z-10">
-          <div className={`p-3 rounded-2xl ${colorClass}`}>
-            <Icon className="h-6 w-6" />
-          </div>
-          <div className="flex-1 space-y-1">
-            <div className="font-semibold flex items-center gap-2">
-              {title}
-              <ChevronRight className="h-4 w-4 opacity-0 -ml-2 transition-all group-hover:opacity-100 group-hover:ml-0 text-primary" />
-            </div>
-            <p className="text-sm text-muted-foreground leading-snug">{description}</p>
-          </div>
+    <Card className="p-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className="mt-2 text-3xl font-semibold tabular-nums">{value}</div>
         </div>
-      </Card>
-    </Link>
+        <Icon className={`h-5 w-5 ${toneCls}`} />
+      </div>
+    </Card>
   );
 }
 
@@ -73,112 +36,61 @@ function Dashboard() {
   const { data: user } = useCurrentUser();
   const isManager = hasRole(user, "admin", "asset_manager");
   const isDeptHead = hasRole(user, "department_head");
-  const isEmployee = hasRole(user, "employee");
+
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats", user?.userId, user?.primaryRole],
     enabled: !!user,
-    queryFn: () => getDashboardOverviewCounts(user?.userId, user?.primaryRole),
+    queryFn: getDashboardOverviewCounts,
   });
 
   return (
-    <div className="space-y-8 max-w-7xl pb-10">
-      {/* Premium Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-primary/80 text-primary-foreground p-8 sm:p-10 shadow-lg">
-        {/* Glassmorphism decorative circles */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-white/10 blur-3xl mix-blend-overlay"></div>
-        <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-40 h-40 rounded-full bg-white/10 blur-2xl mix-blend-overlay"></div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row gap-6 justify-between md:items-end">
-          <div className="space-y-2">
-            <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-md mb-2">
-              {isManager ? "Management Workspace" : isDeptHead ? "Department Workspace" : "Employee Workspace"}
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-              Welcome back{user?.profile?.name ? `, ${user.profile.name.split(" ")[0]}` : ""}!
-            </h1>
-            <p className="text-primary-foreground/80 text-base max-w-xl">
-              {isEmployee
-                ? "View your assets, bookings and maintenance requests."
-                : isDeptHead
-                ? "Manage your department assets and approvals."
-                : "Live view of assets, allocations, bookings and maintenance across the organization."}
-            </p>
-          </div>
-        </div>
+    <div className="space-y-6 max-w-7xl">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Welcome{user?.profile?.name ? `, ${user.profile.name.split(" ")[0]}` : ""}
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Live view of assets, allocations, bookings, and maintenance across the organization.
+        </p>
       </div>
 
-      {/* Quick Actions - Role Based */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-1">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {isManager && (
-            <ActionCard 
-              title="Register Asset" 
-              description="Add a new physical or digital asset to the registry." 
-              icon={Package} href="/assets" 
-              colorClass="bg-indigo-500/10 text-indigo-500" 
-            />
-          )}
-          <ActionCard 
-            title="Book Resource" 
-            description="Reserve shared resources like rooms or vehicles." 
-            icon={Calendar} href="/bookings" 
-            colorClass="bg-emerald-500/10 text-emerald-500" 
-          />
-          <ActionCard 
-            title="Raise Maintenance" 
-            description="Report an issue or request repair for an asset." 
-            icon={Wrench} href="/maintenance" 
-            colorClass="bg-amber-500/10 text-amber-500" 
-          />
-          {(isManager || isDeptHead) && (
-            <ActionCard 
-              title="Review Transfers" 
-              description="Approve or reject pending asset transfer requests." 
-              icon={ArrowLeftRight} href="/transfers" 
-              colorClass="bg-blue-500/10 text-blue-500" 
-            />
-          )}
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Kpi label="Available" value={stats?.available ?? "—"} icon={CheckCircle2} tone="success" />
+        <Kpi label="Allocated" value={stats?.allocated ?? "—"} icon={Users} />
+        <Kpi label="Maintenance" value={stats?.maintenance ?? "—"} icon={Wrench} />
+        <Kpi label="Active bookings" value={stats?.activeBookings ?? "—"} icon={Calendar} />
+        <Kpi label="Pending transfers" value={stats?.pendingTransfers ?? "—"} icon={ArrowLeftRight} />
+        <Kpi label="Overdue" value={stats?.overdue ?? "—"} icon={Clock} tone="warning" />
       </div>
 
-      {/* Overview Stats Grid */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-1">
-          {isEmployee ? "My Overview" : "Organization Overview"}
-        </h2>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {!isEmployee && (
-            <Kpi label="Available" value={stats?.available ?? "—"} icon={CheckCircle2} tone="success" href="/assets" />
-          )}
-          <Kpi label={isEmployee ? "My Allocations" : "Allocated"} value={stats?.allocated ?? "—"} icon={Users} href="/allocations" tone="primary" />
-          <Kpi label={isEmployee ? "My Maintenance" : "Maintenance"} value={stats?.maintenance ?? "—"} icon={Wrench} href="/maintenance" tone="warning" />
-          <Kpi label={isEmployee ? "My Bookings" : "Active Bookings"} value={stats?.activeBookings ?? "—"} icon={Calendar} href="/bookings" />
-          <Kpi label={isEmployee ? "My Transfers" : "Pending Transfers"} value={stats?.pendingTransfers ?? "—"} icon={ArrowLeftRight} href="/transfers" />
-          <Kpi label={isEmployee ? "My Overdue" : "Overdue"} value={stats?.overdue ?? "—"} icon={Clock} tone="warning" href="/allocations" />
-        </div>
-      </div>
-
-      {/* Warning Alert for Overdue */}
       {(stats?.overdue ?? 0) > 0 && (
-        <Card className="p-5 border-amber-500/40 bg-amber-500/5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start gap-4">
-            <div className="p-2 bg-amber-500/20 rounded-full mt-0.5">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0" />
-            </div>
+        <Card className="p-4 border-warning/40 bg-warning/5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
             <div className="flex-1">
-              <div className="font-semibold text-amber-800 dark:text-amber-400 text-base">Overdue allocations require attention</div>
-              <p className="text-sm text-amber-700/80 dark:text-amber-500/80 mt-1">
-                You have {stats?.overdue} allocation{(stats?.overdue ?? 0) === 1 ? "" : "s"} past the expected return date. Please check the allocations queue.
+              <div className="font-medium">Overdue allocations need attention</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {stats?.overdue} allocation{(stats?.overdue ?? 0) === 1 ? "" : "s"} past expected return date.
               </p>
             </div>
-            <Button asChild variant="default" className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm">
-              <Link to="/allocations">Review Now</Link>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/allocations">Review</Link>
             </Button>
           </div>
         </Card>
       )}
+
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Quick actions</h2>
+        <div className="flex flex-wrap gap-2">
+          {isManager && <Button asChild><Link to="/assets"><Package className="h-4 w-4 mr-2" />Register asset</Link></Button>}
+          <Button asChild variant="outline"><Link to="/bookings"><Calendar className="h-4 w-4 mr-2" />Book resource</Link></Button>
+          <Button asChild variant="outline"><Link to="/maintenance"><Wrench className="h-4 w-4 mr-2" />Raise maintenance</Link></Button>
+          {(isManager || isDeptHead) && (
+            <Button asChild variant="outline"><Link to="/transfers"><ArrowLeftRight className="h-4 w-4 mr-2" />Review transfers</Link></Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

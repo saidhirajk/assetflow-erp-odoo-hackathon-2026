@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentUserSnapshot, type AppRole, type BackendCurrentUser } from "@/lib/backend/app-backend";
 
-export type { AppRole };
-
 export interface CurrentUser {
   userId: string;
   email: string;

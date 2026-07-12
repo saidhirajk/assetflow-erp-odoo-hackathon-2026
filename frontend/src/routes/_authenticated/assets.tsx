@@ -23,7 +23,6 @@ import {
   type AssetCustomFieldDefinition,
 } from "@/lib/backend/app-backend";
 import { toast } from "sonner";
-import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/assets")({
   head: () => ({ meta: [{ title: "Assets — AssetFlow" }] }),
@@ -32,8 +31,6 @@ export const Route = createFileRoute("/_authenticated/assets")({
 
 function AssetsPage() {
   const queryClient = useQueryClient();
-  const { data: user } = useCurrentUser();
-  const isAdminOrMgr = hasRole(user, "admin", "asset_manager");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -251,7 +248,7 @@ function AssetsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="directory">Directory</TabsTrigger>
-          {isAdminOrMgr && <TabsTrigger value="register">Register asset</TabsTrigger>}
+          <TabsTrigger value="register">Register asset</TabsTrigger>
         </TabsList>
 
         <TabsContent value="directory" className="space-y-4">
@@ -375,11 +372,9 @@ function AssetsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {isAdminOrMgr && (
-                      <Button variant="outline" size="sm" onClick={beginEditAsset} disabled={isEditingAsset}>
-                        Edit asset
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" onClick={beginEditAsset} disabled={isEditingAsset}>
+                      Edit asset
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => setSelectedAssetId(null)}>
                       Close detail
                     </Button>
@@ -567,120 +562,149 @@ function AssetsPage() {
           </Card>
         </TabsContent>
 
-        {isAdminOrMgr && (
-          <TabsContent value="register">
-            <Card className="p-4 space-y-5">
-              <div>
-                <h2 className="font-medium">Register asset</h2>
-                <p className="text-sm text-muted-foreground">Server-side tag generation stays behind the adapter.</p>
+        <TabsContent value="register">
+          <Card className="p-4 space-y-5">
+            <div>
+              <h2 className="font-medium">Register asset</h2>
+              <p className="text-sm text-muted-foreground">Server-side tag generation stays behind the adapter.</p>
+            </div>
+
+            <form
+              className="space-y-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                createMutation.mutate();
+              }}
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="asset-name">Asset name</Label>
+                  <Input
+                    id="asset-name"
+                    value={form.name}
+                    onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-serial">Serial number</Label>
+                  <Input
+                    id="asset-serial"
+                    value={form.serial_number}
+                    onChange={(event) => setForm((current) => ({ ...current, serial_number: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-category">Category</Label>
+                  <Select value={form.category_id} onValueChange={(value) => setForm((current) => ({ ...current, category_id: value }))}>
+                    <SelectTrigger id="asset-category">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(categoriesQuery.data ?? []).map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-department">Department</Label>
+                  <Select value={form.department_id} onValueChange={(value) => setForm((current) => ({ ...current, department_id: value }))}>
+                    <SelectTrigger id="asset-department">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(departmentsQuery.data ?? []).map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-acq-date">Acquisition date</Label>
+                  <Input
+                    id="asset-acq-date"
+                    type="date"
+                    value={form.acquisition_date}
+                    onChange={(event) => setForm((current) => ({ ...current, acquisition_date: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-acq-cost">Acquisition cost</Label>
+                  <Input
+                    id="asset-acq-cost"
+                    type="number"
+                    step="0.01"
+                    value={form.acquisition_cost}
+                    onChange={(event) => setForm((current) => ({ ...current, acquisition_cost: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-condition">Condition</Label>
+                  <Select value={form.condition} onValueChange={(value) => setForm((current) => ({ ...current, condition: value }))}>
+                    <SelectTrigger id="asset-condition">
+                      <SelectValue placeholder="Condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="fair">Fair</SelectItem>
+                      <SelectItem value="poor">Poor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-location">Location</Label>
+                  <Input
+                    id="asset-location"
+                    value={form.location}
+                    onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asset-photo">Photo URL</Label>
+                  <Input
+                    id="asset-photo"
+                    value={form.photo_url}
+                    onChange={(event) => setForm((current) => ({ ...current, photo_url: event.target.value }))}
+                  />
+                </div>
               </div>
 
-              <form
-                className="space-y-5"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  createMutation.mutate();
-                }}
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-name">Asset name <span className="text-destructive">*</span></Label>
-                    <Input id="asset-name" required value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-category">Category <span className="text-destructive">*</span></Label>
-                    <Select required value={form.category_id} onValueChange={(value) => setForm((current) => ({ ...current, category_id: value }))}>
-                      <SelectTrigger id="asset-category"><SelectValue placeholder="Select category" /></SelectTrigger>
-                      <SelectContent>
-                        {(categoriesQuery.data ?? []).map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-department">Department <span className="text-destructive">*</span></Label>
-                    <Select required value={form.department_id} onValueChange={(value) => setForm((current) => ({ ...current, department_id: value }))}>
-                      <SelectTrigger id="asset-department"><SelectValue placeholder="Select department" /></SelectTrigger>
-                      <SelectContent>
-                        {(departmentsQuery.data ?? []).map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-serial">Serial number</Label>
-                    <Input id="asset-serial" value={form.serial_number} onChange={(event) => setForm((current) => ({ ...current, serial_number: event.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-location">Location</Label>
-                    <Input id="asset-location" value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-acq-date">Acquisition date</Label>
-                    <Input id="asset-acq-date" type="date" value={form.acquisition_date} onChange={(event) => setForm((current) => ({ ...current, acquisition_date: event.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-acq-cost">Acquisition cost</Label>
-                    <Input id="asset-acq-cost" type="number" step="0.01" value={form.acquisition_cost} onChange={(event) => setForm((current) => ({ ...current, acquisition_cost: event.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-condition">Condition <span className="text-destructive">*</span></Label>
-                    <Select required value={form.condition} onValueChange={(value) => setForm((current) => ({ ...current, condition: value }))}>
-                      <SelectTrigger id="asset-condition"><SelectValue placeholder="Condition" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="good">Good</SelectItem>
-                        <SelectItem value="fair">Fair</SelectItem>
-                        <SelectItem value="poor">Poor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="asset-photo">Photo URL</Label>
-                    <Input id="asset-photo" value={form.photo_url} onChange={(event) => setForm((current) => ({ ...current, photo_url: event.target.value }))} />
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="asset-bookable"
+                  type="checkbox"
+                  checked={form.is_bookable}
+                  onChange={(event) => setForm((current) => ({ ...current, is_bookable: event.target.checked }))}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <Label htmlFor="asset-bookable">Bookable shared resource</Label>
+              </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    id="asset-bookable"
-                    type="checkbox"
-                    checked={form.is_bookable}
-                    onChange={(event) => setForm((current) => ({ ...current, is_bookable: event.target.checked }))}
-                    className="h-4 w-4 rounded border-border"
-                  />
-                  <Label htmlFor="asset-bookable">Bookable shared resource</Label>
+              <div className="space-y-3 rounded-md border border-border/70 p-4">
+                <div>
+                  <h3 className="font-medium">Category custom fields</h3>
+                  <p className="text-xs text-muted-foreground">These render from the selected category schema.</p>
                 </div>
+                {renderCustomFields(selectedCategory, customValues, setCustomValues)}
+              </div>
 
-                {form.category_id && (
-                  <div className="space-y-3 rounded-md border border-border/70 p-4">
-                    <div>
-                      <h3 className="font-medium">Custom values</h3>
-                      <p className="text-xs text-muted-foreground">Required fields for this category.</p>
-                    </div>
-                    {renderCustomFields(
-                      (categoriesQuery.data ?? []).find(c => c.id === form.category_id) as AssetCategoryRecord,
-                      customValues,
-                      setCustomValues,
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Registering…" : "Register asset"}
-                  </Button>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">
+                  Asset tag and QR code will be generated by the database trigger.
                 </div>
-              </form>
-            </Card>
-          </TabsContent>
-        )}
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Creating…" : "Create asset"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );

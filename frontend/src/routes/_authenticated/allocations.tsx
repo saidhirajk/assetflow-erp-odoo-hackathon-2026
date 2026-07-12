@@ -19,7 +19,6 @@ import {
   requestAssetTransfer,
   returnAllocation,
 } from "@/lib/backend/app-backend";
-import { useCurrentUser, hasRole } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/allocations")({
   head: () => ({ meta: [{ title: "Allocations - AssetFlow" }] }),
@@ -28,10 +27,6 @@ export const Route = createFileRoute("/_authenticated/allocations")({
 
 function AllocationsPage() {
   const qc = useQueryClient();
-  const { data: user } = useCurrentUser();
-  const isAdminOrMgr = hasRole(user, "admin", "asset_manager");
-  const isDeptHead = hasRole(user, "department_head");
-
   const [form, setForm] = useState({
     asset_id: "",
     target_type: "user",
@@ -46,16 +41,6 @@ function AllocationsPage() {
   const peopleQuery = useQuery({ queryKey: ["active-people"], queryFn: listActivePeople });
   const departmentsQuery = useQuery({ queryKey: ["active-departments"], queryFn: listActiveDepartments });
   const allocationsQuery = useQuery({ queryKey: ["active-allocations"], queryFn: listActiveAllocations });
-
-  const visibleAllocations = useMemo(() => {
-    const all = allocationsQuery.data ?? [];
-    if (isAdminOrMgr) return all;
-    return all.filter(
-      (a) =>
-        a.allocated_to_user_id === user?.userId ||
-        (isDeptHead && a.allocated_to_department_id === user?.profile?.department_id)
-    );
-  }, [allocationsQuery.data, isAdminOrMgr, isDeptHead, user]);
 
   const availableAssets = useMemo(
     () => (assetsQuery.data ?? []).filter((asset) => asset.status === "available" || asset.status === "allocated"),
@@ -115,9 +100,8 @@ function AllocationsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-        {isAdminOrMgr && (
-          <Card className="space-y-4 p-4">
-            <div>
+        <Card className="space-y-4 p-4">
+          <div>
             <h2 className="font-medium">Allocate asset</h2>
             <p className="text-sm text-muted-foreground">Conflicts return the current holder and offer a transfer request path.</p>
           </div>
@@ -201,130 +185,59 @@ function AllocationsPage() {
             </Alert>
           )}
 
-            <Button className="w-full" disabled={!canSubmit || allocateMutation.isPending} onClick={() => allocateMutation.mutate()}>
-              {allocateMutation.isPending ? "Allocating..." : "Allocate asset"}
-            </Button>
-          </Card>
-        )}
+          <Button className="w-full" disabled={!canSubmit || allocateMutation.isPending} onClick={() => allocateMutation.mutate()}>
+            {allocateMutation.isPending ? "Allocating..." : "Allocate asset"}
+          </Button>
+        </Card>
 
-        <div className="space-y-4">
-          {/* Overdue allocations — visually distinct per TDD Rule #7 */}
-          {visibleAllocations.some((a) => a.status === "overdue") && (
-            <Card className="border-amber-500/40 bg-amber-500/5 space-y-4 p-4">
-              <div>
-                <h2 className="font-medium flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                  <span>⚠ Overdue allocations</span>
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  These have passed their expected return date. Action required.
-                </p>
-              </div>
-              <div className="space-y-3">
-                {visibleAllocations
-                  .filter((allocation) => allocation.status === "overdue")
-                  .map((allocation) => (
-                    <div
-                      key={allocation.id}
-                      className="grid gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 lg:grid-cols-[1fr_280px]"
-                    >
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{allocation.asset?.name ?? "Unknown asset"}</span>
-                          <Badge variant="destructive">overdue</Badge>
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {allocation.asset?.asset_tag ?? allocation.asset_id} assigned to{" "}
-                          {allocation.allocatedToUser?.name ?? allocation.allocatedToDepartment?.name ?? "Unknown holder"}
-                        </div>
-                        <div className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          Expected return: {allocation.expected_return_date}
-                        </div>
-                      </div>
-                      {isAdminOrMgr && (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={returnNotes[allocation.id] ?? ""}
-                            onChange={(event) =>
-                              setReturnNotes((current) => ({ ...current, [allocation.id]: event.target.value }))
-                            }
-                            placeholder="Return condition notes"
-                          />
-                          <Button
-                            className="w-full"
-                            variant="outline"
-                            disabled={returnMutation.isPending}
-                            onClick={() => returnMutation.mutate(allocation.id)}
-                          >
-                            Mark returned
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            </Card>
-          )}
+        <Card className="space-y-4 p-4">
+          <div>
+            <h2 className="font-medium">Active allocations</h2>
+            <p className="text-sm text-muted-foreground">Returns update the allocation and asset state in one backend transaction.</p>
+          </div>
 
-          {/* Active allocations */}
-          <Card className="space-y-4 p-4">
-            <div>
-              <h2 className="font-medium">Active allocations</h2>
-              <p className="text-sm text-muted-foreground">
-                Returns update the allocation and asset state in one backend transaction.
-              </p>
-            </div>
-            <div className="space-y-3">
-              {visibleAllocations.filter((a) => a.status !== "overdue").length ? (
-                visibleAllocations
-                  .filter((allocation) => allocation.status !== "overdue")
-                  .map((allocation) => (
-                    <div
-                      key={allocation.id}
-                      className="grid gap-3 rounded-md border border-border/70 p-4 lg:grid-cols-[1fr_280px]"
-                    >
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{allocation.asset?.name ?? "Unknown asset"}</span>
-                          <Badge variant="secondary">{allocation.status}</Badge>
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {allocation.asset?.asset_tag ?? allocation.asset_id} assigned to{" "}
-                          {allocation.allocatedToUser?.name ?? allocation.allocatedToDepartment?.name ?? "Unknown holder"}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Allocated {allocation.allocated_date}
-                          {allocation.expected_return_date ? ` — expected ${allocation.expected_return_date}` : ""}
-                        </div>
-                      </div>
-                      {isAdminOrMgr && (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={returnNotes[allocation.id] ?? ""}
-                            onChange={(event) =>
-                              setReturnNotes((current) => ({ ...current, [allocation.id]: event.target.value }))
-                            }
-                            placeholder="Return condition notes"
-                          />
-                          <Button
-                            className="w-full"
-                            variant="outline"
-                            disabled={returnMutation.isPending}
-                            onClick={() => returnMutation.mutate(allocation.id)}
-                          >
-                            Mark returned
-                          </Button>
-                        </div>
-                      )}
+          <div className="space-y-3">
+            {(allocationsQuery.data ?? []).length ? (
+              (allocationsQuery.data ?? []).map((allocation) => (
+                <div key={allocation.id} className="grid gap-3 rounded-md border border-border/70 p-4 lg:grid-cols-[1fr_280px]">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{allocation.asset?.name ?? "Unknown asset"}</span>
+                      <Badge variant={allocation.status === "overdue" ? "destructive" : "secondary"}>{allocation.status}</Badge>
                     </div>
-                  ))
-              ) : (
-                <div className="rounded-md border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-                  No active allocations.
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {allocation.asset?.asset_tag ?? allocation.asset_id} assigned to{" "}
+                      {allocation.allocatedToUser?.name ?? allocation.allocatedToDepartment?.name ?? "Unknown holder"}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Allocated {allocation.allocated_date}
+                      {allocation.expected_return_date ? ` - expected ${allocation.expected_return_date}` : ""}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Textarea
+                      value={returnNotes[allocation.id] ?? ""}
+                      onChange={(event) => setReturnNotes((current) => ({ ...current, [allocation.id]: event.target.value }))}
+                      placeholder="Return condition notes"
+                    />
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      disabled={returnMutation.isPending}
+                      onClick={() => returnMutation.mutate(allocation.id)}
+                    >
+                      Mark returned
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
-          </Card>
-        </div>
+              ))
+            ) : (
+              <div className="rounded-md border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
+                No active allocations.
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );
