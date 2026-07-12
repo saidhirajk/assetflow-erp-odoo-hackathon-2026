@@ -18,7 +18,7 @@ import {
 } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/maintenance")({
-  head: () => ({ meta: [{ title: "Maintenance - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Maintenance - Sampada" }] }),
   component: MaintenancePage,
 });
 

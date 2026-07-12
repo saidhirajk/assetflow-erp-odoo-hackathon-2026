@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getDashboardOverviewCounts } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Dashboard - Sampada" }] }),
   component: Dashboard,
 });
 
@@ -55,12 +55,12 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi label="Available" value={stats?.available ?? "—"} icon={CheckCircle2} tone="success" />
-        <Kpi label="Allocated" value={stats?.allocated ?? "—"} icon={Users} />
-        <Kpi label="Maintenance" value={stats?.maintenance ?? "—"} icon={Wrench} />
-        <Kpi label="Active bookings" value={stats?.activeBookings ?? "—"} icon={Calendar} />
-        <Kpi label="Pending transfers" value={stats?.pendingTransfers ?? "—"} icon={ArrowLeftRight} />
-        <Kpi label="Overdue" value={stats?.overdue ?? "—"} icon={Clock} tone="warning" />
+        <Kpi label="Available" value={stats?.available ?? "-"} icon={CheckCircle2} tone="success" />
+        <Kpi label="Allocated" value={stats?.allocated ?? "-"} icon={Users} />
+        <Kpi label="Maintenance" value={stats?.maintenance ?? "-"} icon={Wrench} />
+        <Kpi label="Active bookings" value={stats?.activeBookings ?? "-"} icon={Calendar} />
+        <Kpi label="Pending transfers" value={stats?.pendingTransfers ?? "-"} icon={ArrowLeftRight} />
+        <Kpi label="Overdue" value={stats?.overdue ?? "-"} icon={Clock} tone="warning" />
       </div>
 
       {(stats?.overdue ?? 0) > 0 && (

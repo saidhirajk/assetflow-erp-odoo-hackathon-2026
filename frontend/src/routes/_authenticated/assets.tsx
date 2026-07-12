@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/assets")({
-  head: () => ({ meta: [{ title: "Assets — AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Assets - Sampada" }] }),
   component: AssetsPage,
 });
 
@@ -327,7 +327,7 @@ function AssetsPage() {
                         <Badge variant={asset.status === "available" ? "default" : "secondary"}>{asset.status}</Badge>
                         {asset.is_bookable && <div className="mt-2 text-xs text-muted-foreground">Bookable</div>}
                       </div>
-                      <div className="text-muted-foreground">{asset.location ?? "—"}</div>
+                      <div className="text-muted-foreground">{asset.location ?? "-"}</div>
                       <div className="flex justify-end gap-2">
                         <Button asChild variant="outline" size="sm" onClick={(event) => event.stopPropagation()}>
                           <Link to="/notifications">View activity</Link>

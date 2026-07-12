@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cancelBooking, createBooking, listBookableAssets, listBookings } from "@/lib/backend/app-backend";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
-  head: () => ({ meta: [{ title: "Bookings - AssetFlow" }] }),
+  head: () => ({ meta: [{ title: "Bookings - Sampada" }] }),
   component: BookingsPage,
 });
 
