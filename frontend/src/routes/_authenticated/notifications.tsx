@@ -17,26 +17,25 @@ function NotificationsPage() {
   const qc = useQueryClient();
   const { data: items = [] } = useQuery({
     queryKey: ["notifications"],
-    queryFn: listNotifications,
+    queryFn: () => listNotifications(100),
   });
 
   const resolveHref = (notification: { type?: string; reference_type?: string | null }) => {
     switch (notification.reference_type ?? notification.type) {
-      case "asset_assigned":
-      case "maintenance_approved":
-      case "maintenance_rejected":
+      case "AssetAssigned":
         return "/assets";
-      case "booking_confirmed":
-      case "booking_cancelled":
-      case "booking_reminder":
+      case "MaintenanceApproved":
+      case "MaintenanceRejected":
+        return "/maintenance";
+      case "BookingConfirmed":
+      case "BookingCancelled":
+      case "BookingReminder":
         return "/bookings";
-      case "transfer_requested":
-      case "transfer_approved":
-      case "transfer_rejected":
+      case "TransferApproved":
         return "/transfers";
-      case "overdue_return":
+      case "OverdueReturn":
         return "/allocations";
-      case "audit_discrepancy":
+      case "AuditDiscrepancy":
         return "/audits";
       default:
         return "/notifications";
@@ -44,10 +43,7 @@ function NotificationsPage() {
   };
 
   const markAll = useMutation({
-    mutationFn: async () => {
-      const { error } = await markAllNotificationsRead();
-      if (error) throw error;
-    },
+    mutationFn: () => markAllNotificationsRead(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications-unread"] });

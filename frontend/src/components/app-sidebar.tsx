@@ -19,7 +19,7 @@ const mainNav: NavItem[] = [
   { title: "Bookings", url: "/bookings", icon: Calendar },
   { title: "Maintenance", url: "/maintenance", icon: Wrench },
   { title: "Audits", url: "/audits", icon: ClipboardCheck, roles: ["admin","asset_manager"] },
-  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin","asset_manager","department_head"] },
+  { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
 const adminNav: NavItem[] = [
